@@ -1,0 +1,47 @@
+# Manual checklist
+
+Run this before each release, on the live site. Tick each line.
+
+## Five real samples
+
+Paste each sample on the Explain page. Every one must return a useful answer in a few seconds.
+Errors must show all five parts. Docs paragraphs must show four (no "What to try next").
+
+**Error messages**
+
+1. ```
+   TypeError: Cannot read properties of undefined (reading 'map')
+       at ProductList (ProductList.jsx:14:22)
+       at renderWithHooks (react-dom.development.js:15486:18)
+   ```
+2. ```
+   npm ERR! code ERESOLVE
+   npm ERR! ERESOLVE could not resolve
+   npm ERR! While resolving: some-chart-lib@2.1.0
+   npm ERR! Found: react@19.0.0
+   npm ERR! Could not resolve dependency:
+   npm ERR! peer react@"^17.0.0" from some-chart-lib@2.1.0
+   ```
+
+**Docs paragraphs** (short quotes from public documentation)
+
+3. React docs: "useEffect is a React Hook that lets you synchronize a component with an external system."
+4. MDN, Promise: "The Promise object represents the eventual completion (or failure) of an asynchronous operation and its resulting value."
+5. MDN, CORS: "Cross-Origin Resource Sharing (CORS) is an HTTP-header based mechanism that allows a server to indicate any origins other than its own from which a browser should permit loading resources."
+
+## Polish checks (from Task 7)
+
+- [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.
+- [ ] Every text and button colour pair passes WCAG AA (use the browser's contrast tool).
+- [ ] Every control shows the focus ring and works with the keyboard.
+- [ ] No horizontal scroll at 360px wide.
+- [ ] Each page looks right at 1280px and 390px wide: Explain, My Words, Practice, Practice results.
+
+## Live site checks (from Task 8)
+
+- [ ] A real error message and a real docs paragraph each return a five-part (error) or four-part (docs) answer.
+- [ ] A saved word is still there after closing and reopening the browser.
+- [ ] Opening `/words` and `/practice` directly in the address bar works.
+- [ ] In the browser's Network and Sources tabs, searching for `gsk_` finds nothing.
+- [ ] Text over 3,000 characters is blocked in the browser, and `POST /api/explain` with 3,001 characters answers `400`.
+- [ ] Turn off the network, press Explain: "No connection" and a "Try again" button appear and the pasted text stays.
