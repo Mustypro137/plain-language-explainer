@@ -1,38 +1,62 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import ChoiceQuestion from '../components/ChoiceQuestion.jsx'
 import EmptyState from '../components/EmptyState.jsx'
-import { buildRound, nextBox } from '../lib/practice.js'
+import { buildChoices, buildRound, canUseChoices, nextBox } from '../lib/practice.js'
 import { listWords, setBox } from '../lib/wordStore.js'
 
 const noun = (n) => (n === 1 ? 'word' : 'words')
 
 export default function PracticePage() {
   // The round is built once, so box changes during it do not reorder the cards.
-  const [round, setRound] = useState(() => buildRound(listWords()))
+  const [pool, setPool] = useState(listWords)
+  const [round, setRound] = useState(() => buildRound(pool))
+  const [mode, setMode] = useState('cards') // cards | choice
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [answers, setAnswers] = useState([])
 
   const finished = round.length > 0 && index >= round.length
   const card = round[index]
+  const choicesAllowed = canUseChoices(pool)
+  const choices = useMemo(
+    () => (mode === 'choice' && card ? buildChoices(card, pool) : null),
+    [mode, card, pool],
+  )
 
-  function answer(knew) {
-    if (!flipped || !card) return
+  function record(knew) {
     setBox(card.id, nextBox(card.box, knew))
     setAnswers((prev) => [...prev, { word: card, knew }])
-    setIndex(index + 1)
+  }
+
+  function next() {
+    setIndex((i) => i + 1)
     setFlipped(false)
   }
 
+  function answer(knew) {
+    if (!flipped || !card) return
+    record(knew)
+    next()
+  }
+
   function restart() {
-    setRound(buildRound(listWords()))
+    const words = listWords()
+    setPool(words)
+    setRound(buildRound(words))
     setIndex(0)
     setFlipped(false)
     setAnswers([])
   }
 
+  function changeMode(nextMode) {
+    if (nextMode === mode) return
+    setMode(nextMode)
+    restart()
+  }
+
   useEffect(() => {
-    if (!card) return undefined
+    if (!card || mode !== 'cards') return undefined
     function onKeyDown(e) {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
       const target = e.target instanceof Element ? e.target : null
@@ -122,7 +146,34 @@ export default function PracticePage() {
   return (
     <main className="page narrow-page">
       <div className="stack-sm">
-        <h1>Practice</h1>
+        <div className="page-head">
+          <h1>Practice</h1>
+          <div className="mode-switch" role="group" aria-label="Practice mode">
+            <button
+              type="button"
+              className="btn"
+              aria-pressed={mode === 'cards'}
+              onClick={() => changeMode('cards')}
+            >
+              Flashcards
+            </button>
+            <button
+              type="button"
+              className="btn"
+              aria-pressed={mode === 'choice'}
+              disabled={!choicesAllowed}
+              aria-describedby={choicesAllowed ? undefined : 'choice-hint'}
+              onClick={() => changeMode('choice')}
+            >
+              Multiple choice
+            </button>
+          </div>
+        </div>
+        {!choicesAllowed && (
+          <p id="choice-hint" className="soft">
+            Save at least 4 words to use multiple choice.
+          </p>
+        )}
         <div className="progress-row">
           <span className="progress-label">
             Card {index + 1} of {round.length}
@@ -140,6 +191,15 @@ export default function PracticePage() {
         </div>
       </div>
 
+      {mode === 'choice' ? (
+        <>
+          <ChoiceQuestion key={card.id} card={card} choices={choices} onAnswer={record} onNext={next} />
+          <p className="soft hint">
+            Press <kbd>1</kbd> to <kbd>4</kbd> to choose, then <kbd>Enter</kbd> for the next word
+          </p>
+        </>
+      ) : (
+        <>
       {flipped ? (
         <section className="flashcard flashcard-back" aria-label="Flashcard">
           <span className="flashcard-word">{card.word}</span>
@@ -169,6 +229,8 @@ export default function PracticePage() {
       <p className="soft hint">
         Press <kbd>Space</kbd> to flip the card
       </p>
+        </>
+      )}
     </main>
   )
 }

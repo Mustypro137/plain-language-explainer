@@ -1,4 +1,4 @@
-import { ROUND_SIZE, buildRound, nextBox } from './practice.js'
+import { CHOICES, ROUND_SIZE, buildChoices, buildRound, canUseChoices, nextBox } from './practice.js'
 
 const w = (id, box, savedAt) => ({ id, word: id, meaning: 'm', sentence: 's', box, savedAt })
 
@@ -42,4 +42,45 @@ test('buildRound does not change the list it is given', () => {
   const words = [w('b', 2, '2026-01-02'), w('a', 1, '2026-01-01')]
   buildRound(words)
   expect(words.map((x) => x.id)).toEqual(['b', 'a'])
+})
+
+const mw = (id, meaning) => ({ id, word: id, meaning, sentence: 's', box: 1, savedAt: '2026-01-01' })
+const pool = [mw('a', 'Meaning A'), mw('b', 'Meaning B'), mw('c', 'Meaning C'), mw('d', 'Meaning D'), mw('e', 'Meaning E')]
+
+// A fixed "random" source, so the order is the same on every run.
+const seq = (...values) => {
+  let i = 0
+  return () => values[i++ % values.length]
+}
+
+test('CHOICES is 4', () => expect(CHOICES).toBe(4))
+
+test('buildChoices gives four meanings with exactly one right answer', () => {
+  const choices = buildChoices(pool[0], pool, seq(0.1, 0.7, 0.4, 0.9, 0.2))
+  expect(choices).toHaveLength(4)
+  expect(choices.filter((c) => c.correct)).toEqual([{ meaning: 'Meaning A', correct: true }])
+  expect(new Set(choices.map((c) => c.meaning)).size).toBe(4)
+  for (const c of choices) expect(pool.map((w) => w.meaning)).toContain(c.meaning)
+})
+
+test('buildChoices does not always put the right answer first', () => {
+  const places = new Set()
+  for (const r of [0, 0.3, 0.6, 0.99]) {
+    places.add(buildChoices(pool[0], pool, () => r).findIndex((c) => c.correct))
+  }
+  expect(places.size).toBeGreaterThan(1)
+})
+
+test('wrong answers never repeat the right meaning, even in another letter case', () => {
+  const words = [mw('a', 'Same thing'), mw('b', ' same THING '), mw('c', 'Other 1'), mw('d', 'Other 2'), mw('e', 'Other 3')]
+  for (const r of [0, 0.5, 0.99]) {
+    const wrong = buildChoices(words[0], words, () => r).filter((c) => !c.correct)
+    expect(wrong.map((c) => c.meaning).sort()).toEqual(['Other 1', 'Other 2', 'Other 3'])
+  }
+})
+
+test('canUseChoices needs four different meanings', () => {
+  expect(canUseChoices(pool.slice(0, 3))).toBe(false)
+  expect(canUseChoices(pool.slice(0, 4))).toBe(true)
+  expect(canUseChoices([...pool.slice(0, 3), mw('x', 'meaning a')])).toBe(false)
 })
