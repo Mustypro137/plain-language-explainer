@@ -251,3 +251,94 @@ test('explaining again leaves the History entry and clears it from the address',
   expect(screen.getByTestId('address')).toHaveTextContent(/^\/$/)
   expect(explainText).toHaveBeenCalledWith('old pasted text')
 })
+
+const simpler = () => screen.getByRole('button', { name: 'Make it simpler' })
+const detail = () => screen.getByRole('button', { name: 'More detail' })
+
+test('no "explain differently" buttons before an answer', () => {
+  setup()
+  expect(screen.queryByRole('button', { name: 'Make it simpler' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'More detail' })).not.toBeInTheDocument()
+})
+
+test('Make it simpler asks again at the simpler level and says so', async () => {
+  explainText
+    .mockResolvedValueOnce({ ok: true, data: errorData })
+    .mockResolvedValueOnce({ ok: true, data: { ...errorData, explanation: 'Even simpler words.' } })
+  const user = setup()
+  await submit(user)
+  expect(screen.getByText('Not clear?')).toBeInTheDocument()
+  await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
+  expect(await screen.findByText('Even simpler words.')).toBeInTheDocument()
+  expect(explainText).toHaveBeenLastCalledWith('some text', 'simpler')
+  expect(screen.getByText('Simpler version')).toBeInTheDocument()
+})
+
+test('More detail asks again at the detail level and says so', async () => {
+  explainText
+    .mockResolvedValueOnce({ ok: true, data: errorData })
+    .mockResolvedValueOnce({ ok: true, data: { ...errorData, explanation: 'A longer answer.' } })
+  const user = setup()
+  await submit(user)
+  await user.click(await screen.findByRole('button', { name: 'More detail' }))
+  expect(await screen.findByText('A longer answer.')).toBeInTheDocument()
+  expect(explainText).toHaveBeenLastCalledWith('some text', 'detail')
+  expect(screen.getByText('More detailed version')).toBeInTheDocument()
+})
+
+test('explaining differently uses the explained text, not later edits in the box', async () => {
+  explainText.mockResolvedValue({ ok: true, data: errorData })
+  const user = setup()
+  await submit(user, 'first text')
+  await user.type(screen.getByLabelText('Your text'), ' and more')
+  await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
+  expect(explainText).toHaveBeenLastCalledWith('first text', 'simpler')
+})
+
+test('a new Explain goes back to the normal level', async () => {
+  explainText.mockResolvedValue({ ok: true, data: errorData })
+  const user = setup()
+  await submit(user)
+  await user.click(await screen.findByRole('button', { name: 'More detail' }))
+  await screen.findByText('More detailed version')
+  await user.click(explainButton())
+  await screen.findByRole('button', { name: 'More detail' })
+  expect(explainText).toHaveBeenLastCalledWith('some text')
+  expect(screen.queryByText('More detailed version')).not.toBeInTheDocument()
+})
+
+test('Try again after going offline repeats the simpler request', async () => {
+  explainText
+    .mockResolvedValueOnce({ ok: true, data: errorData })
+    .mockResolvedValueOnce({ ok: false, error: 'offline' })
+    .mockResolvedValueOnce({ ok: true, data: { ...errorData, explanation: 'Back online.' } })
+  const user = setup()
+  await submit(user)
+  await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
+  await user.click(await screen.findByRole('button', { name: 'Try again' }))
+  expect(await screen.findByText('Back online.')).toBeInTheDocument()
+  expect(explainText).toHaveBeenLastCalledWith('some text', 'simpler')
+  expect(screen.getByText('Simpler version')).toBeInTheDocument()
+})
+
+test('the simpler version replaces the History entry for that text', async () => {
+  explainText
+    .mockResolvedValueOnce({ ok: true, data: errorData })
+    .mockResolvedValueOnce({ ok: true, data: { ...errorData, explanation: 'Even simpler words.' } })
+  const user = setup()
+  await submit(user)
+  await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
+  await screen.findByText('Even simpler words.')
+  expect(listHistory().map((h) => h.result.explanation)).toEqual(['Even simpler words.'])
+})
+
+test('an entry opened from History can be explained differently', async () => {
+  const item = addHistory({ text: 'old pasted text', result: errorData })
+  explainText.mockResolvedValue({ ok: true, data: { ...errorData, explanation: 'Simpler old.' } })
+  const user = setup(`/?item=${item.id}`)
+  await user.click(simpler())
+  expect(await screen.findByText('Simpler old.')).toBeInTheDocument()
+  expect(explainText).toHaveBeenLastCalledWith('old pasted text', 'simpler')
+  expect(screen.queryByText(/From your history/)).not.toBeInTheDocument()
+  expect(detail()).toBeEnabled()
+})

@@ -1,4 +1,4 @@
-import { MAX_CHARS, parseAiAnswer, validateText } from './validate.js'
+import { LEVELS, MAX_CHARS, parseAiAnswer, validateLevel, validateText } from './validate.js'
 
 test('MAX_CHARS is 3000', () => expect(MAX_CHARS).toBe(3000))
 
@@ -65,3 +65,15 @@ test.each([
   [JSON.stringify({ ...good, kind: 'other' })],
   [JSON.stringify({ ...good, explanation: '' })],
 ])('rejects %s', (raw) => expect(parseAiAnswer(raw)).toBeNull())
+
+test('the two levels are simpler and detail', () => expect(LEVELS).toEqual(['simpler', 'detail']))
+
+test.each([[undefined], [null]])('no level (%p) means the normal explanation', (v) =>
+  expect(validateLevel(v)).toEqual({ ok: true, level: null }),
+)
+
+test.each([['simpler'], ['detail']])('%s is a level', (v) => expect(validateLevel(v)).toEqual({ ok: true, level: v }))
+
+test.each([['harder'], [''], [1], [{}], ['SIMPLER']])('%p is not a level', (v) =>
+  expect(validateLevel(v)).toEqual({ ok: false, error: 'bad_level' }),
+)

@@ -10,6 +10,14 @@ export function validateText(text) {
   return { ok: true, text: trimmed }
 }
 
+// "Explain it differently": no level is the normal explanation.
+export const LEVELS = ['simpler', 'detail']
+
+export function validateLevel(level) {
+  if (level === undefined || level === null) return { ok: true, level: null }
+  return LEVELS.includes(level) ? { ok: true, level } : { ok: false, error: 'bad_level' }
+}
+
 const isText = (v) => typeof v === 'string' && v.trim() !== ''
 
 function stripFence(raw) {

@@ -34,7 +34,7 @@ test('200 with the parsed answer', async () => {
   const askAi = vi.fn().mockResolvedValue(JSON.stringify(good))
   const r = await handleExplain({ text: 'hi' }, askAi)
   expect(r).toEqual({ status: 200, body: good })
-  expect(askAi).toHaveBeenCalledWith('hi')
+  expect(askAi).toHaveBeenCalledWith('hi', null)
 })
 
 test('tries once more after a broken answer', async () => {
@@ -70,4 +70,17 @@ test('tries once more after a provider error such as failed JSON mode', async ()
   const r = await handleExplain({ text: 'hi' }, askAi)
   expect(r.status).toBe(200)
   expect(askAi).toHaveBeenCalledTimes(2)
+})
+
+test('passes a level to the AI', async () => {
+  const askAi = vi.fn().mockResolvedValue(JSON.stringify(good))
+  const r = await handleExplain({ text: 'hi', level: 'simpler' }, askAi)
+  expect(r.status).toBe(200)
+  expect(askAi).toHaveBeenCalledWith('hi', 'simpler')
+})
+
+test('400 bad_level for an unknown level, AI not called', async () => {
+  const askAi = vi.fn()
+  expect(await handleExplain({ text: 'hi', level: 'harder' }, askAi)).toEqual({ status: 400, body: { error: 'bad_level' } })
+  expect(askAi).not.toHaveBeenCalled()
 })

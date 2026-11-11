@@ -48,3 +48,14 @@ test('an unreadable error body still gives ai_failed', async () => {
   )
   expect(await explainText('x')).toEqual({ ok: false, error: 'ai_failed' })
 })
+
+test('sends a level when one is given', async () => {
+  const fetchFn = stubFetch(200, data)
+  await explainText('hello', 'simpler')
+  expect(JSON.parse(fetchFn.mock.calls[0][1].body)).toEqual({ text: 'hello', level: 'simpler' })
+})
+
+test('a rejected level is reported', async () => {
+  stubFetch(400, { error: 'bad_level' })
+  expect(await explainText('x', 'detail')).toEqual({ ok: false, error: 'bad_level' })
+})
