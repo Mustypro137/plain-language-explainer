@@ -12,6 +12,7 @@ A web app for beginner developers who find technical English hard. Paste documen
 - **My Words** – the words you saved, with meaning, source sentence and learning level. Search, delete, and export everything as a JSON file.
 - **Practice** – flashcards from your saved words, up to ten per round, lowest level first. Space flips the card, `1` means "I forgot", `2` means "I knew it". A results screen lists the words to review.
 - **History** – the last 20 explanations, newest first. Open one to read it again without a new AI call, delete one, or clear them all.
+- **Dark mode** – follows your device's light or dark setting. The sun/moon button in the top bar switches it, and the choice is remembered in this browser.
 
 No login, no database, no analytics. Saved words and History stay in your own browser (localStorage). Pasted text is sent to the AI to be explained; the app keeps it only in your browser's History, never on a server.
 
@@ -48,4 +49,4 @@ The manual release checks are in [`docs/manual-checklist.md`](docs/manual-checkl
 
 ## Ideas for version 2
 
-Login and accounts, a difficulty selector and follow-up questions, more practice modes (multiple choice first), categories and word statistics, other languages, dark mode.
+Login and accounts, a difficulty selector and follow-up questions, more practice modes (multiple choice first), categories and word statistics, other languages.

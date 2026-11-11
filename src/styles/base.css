@@ -27,18 +27,18 @@ h1 {
 }
 
 a {
-  color: var(--teal);
+  color: var(--link);
 }
 
 .highlight {
   padding: 0 8px;
   border-radius: 4px;
   background: var(--sunshine);
-  color: var(--ink);
+  color: var(--on-bright);
 }
 
 :focus-visible {
-  outline: 3px solid var(--teal);
+  outline: 3px solid var(--link);
   outline-offset: 2px;
 }
 
@@ -72,7 +72,7 @@ a {
   min-height: 52px;
   padding: 12px 28px;
   background: var(--teal);
-  color: #ffffff;
+  color: var(--on-strong);
   font-family: var(--font-heading);
   font-size: 20px;
   box-shadow: var(--shadow);
@@ -134,12 +134,17 @@ a {
   max-width: 1160px;
   margin: 0 auto;
   padding: 14px 16px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'brand toggle'
+    'nav nav';
+  align-items: center;
+  gap: 10px 12px;
 }
 
 .brand {
+  grid-area: brand;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -157,11 +162,28 @@ a {
   border: var(--border);
   border-radius: var(--radius);
   background: var(--sunshine);
-  box-shadow: 3px 3px 0 var(--ink);
+  color: var(--on-bright);
+  box-shadow: 3px 3px 0 var(--shadow-ink);
   font-size: 18px;
 }
 
+.theme-toggle {
+  grid-area: toggle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+
 .main-nav {
+  grid-area: nav;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
@@ -184,12 +206,8 @@ a {
 
 @media (min-width: 640px) {
   .site-header-inner {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
     padding: 16px 24px;
-    gap: 16px;
+    gap: 12px 16px;
   }
 
   .brand {
@@ -204,6 +222,21 @@ a {
   .main-nav a {
     padding: 10px 14px;
     font-size: inherit;
+  }
+}
+
+/* Wide enough for the name, the links and the switch on one line */
+@media (min-width: 900px) {
+  .site-header-inner {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: 'brand nav toggle';
+  }
+}
+
+/* Keep the app name on one line beside the theme switch */
+@media (max-width: 399px) {
+  .brand {
+    font-size: 16px;
   }
 }
 
@@ -339,27 +372,27 @@ a {
 
 .tone-sunshine {
   background: var(--sunshine);
-  color: var(--ink);
+  color: var(--on-bright);
 }
 
 .tone-coral {
   background: var(--coral);
-  color: var(--ink);
+  color: var(--on-bright);
 }
 
 .tone-teal {
   background: var(--teal);
-  color: #ffffff;
+  color: var(--on-strong);
 }
 
 .tone-violet {
   background: var(--violet);
-  color: #ffffff;
+  color: var(--on-strong);
 }
 
 .tone-ink {
   background: var(--ink);
-  color: #ffffff;
+  color: var(--paper);
 }
 
 .steps {
@@ -373,8 +406,8 @@ a {
   margin: 0;
   padding: 16px;
   border-radius: 6px;
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--code-bg);
+  color: var(--code-text);
   font-family: var(--font-mono);
   font-size: 15px;
   line-height: 1.6;
@@ -416,6 +449,7 @@ a {
 
 .word-name-saved {
   background: var(--sunshine);
+  color: var(--on-bright);
 }
 
 /* Loading skeleton */
@@ -459,7 +493,7 @@ a {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   background: var(--sunshine);
-  color: var(--ink);
+  color: var(--on-bright);
   font-weight: 700;
 }
 
@@ -488,7 +522,7 @@ a {
 .btn-violet {
   padding: 8px 20px;
   background: var(--violet);
-  color: #ffffff;
+  color: var(--on-strong);
   font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 800;
@@ -542,6 +576,7 @@ a {
   padding: 0 8px;
   border-radius: 4px;
   background: var(--sunshine);
+  color: var(--on-bright);
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: 22px;
@@ -688,6 +723,7 @@ button.flashcard {
   padding: 0 16px;
   border-radius: 6px;
   background: var(--sunshine);
+  color: var(--on-bright);
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: clamp(36px, 8vw, 52px);
@@ -730,12 +766,12 @@ button.flashcard {
 
 .btn-forgot {
   background: var(--coral);
-  color: var(--ink);
+  color: var(--on-bright);
 }
 
 .btn-knew {
   background: var(--teal);
-  color: #ffffff;
+  color: var(--on-strong);
 }
 
 kbd {
@@ -762,9 +798,9 @@ kbd {
   padding: 36px 32px;
   border: var(--border);
   border-radius: var(--radius);
-  box-shadow: 6px 6px 0 var(--ink);
+  box-shadow: 6px 6px 0 var(--shadow-ink);
   background: var(--violet);
-  color: #ffffff;
+  color: var(--on-strong);
 }
 
 .score-card h1 {
@@ -796,6 +832,7 @@ kbd {
 
 .score-bar-on {
   background: var(--sunshine);
+  color: var(--on-bright);
 }
 
 .review-card {
@@ -814,6 +851,7 @@ kbd {
   padding: 0 8px;
   border-radius: 4px;
   background: var(--coral);
+  color: var(--on-bright);
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: 22px;
@@ -898,7 +936,7 @@ kbd {
 .btn-violet:active,
 .btn-answer:active:not(:disabled) {
   transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow-ink);
 }
 
 .explain-right > .result-card {
@@ -961,10 +999,12 @@ kbd {
 
 .confetti-0 {
   background: var(--sunshine);
+  color: var(--on-bright);
 }
 
 .confetti-1 {
   background: var(--coral);
+  color: var(--on-bright);
   border-radius: 50%;
 }
 
