@@ -1,0 +1,20 @@
+:root {
+  --paper: #faf7f0;
+  --card: #ffffff;
+  --ink: #1f2430;
+  --soft-ink: #5b6270;
+  --teal: #0f766e;
+  --sunshine: #ffd43b;
+  --coral: #ff8a70;
+  --violet: #6247c7;
+  --line: #e7e2d6;
+  --alert: #b42318;
+
+  --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius: 8px;
+  --border: 2px solid var(--ink);
+  --shadow: 4px 4px 0 var(--ink);
+}
