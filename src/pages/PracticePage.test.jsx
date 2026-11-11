@@ -175,3 +175,126 @@ test('stops listening for keys after it is closed', async () => {
   await user.keyboard('2')
   expect(boxOf('alpha')).toBe(1)
 })
+
+const four = () =>
+  put([
+    mk('alpha', 1, '2026-01-01T00:00:00Z'),
+    mk('beta', 1, '2026-01-02T00:00:00Z'),
+    mk('gamma', 2, '2026-01-03T00:00:00Z'),
+    mk('delta', 3, '2026-01-04T00:00:00Z'),
+  ])
+const modeButton = (name) => screen.getByRole('button', { name })
+const choiceButtons = () => within(screen.getByRole('list', { name: 'Choices' })).getAllByRole('button')
+const rightChoice = (word) => screen.getByRole('button', { name: new RegExp(`${word} means$`) })
+
+async function chooseMode(user) {
+  await user.click(modeButton('Multiple choice'))
+}
+
+test('Flashcards is the default mode', () => {
+  four()
+  setup()
+  expect(modeButton('Flashcards')).toHaveAttribute('aria-pressed', 'true')
+  expect(modeButton('Multiple choice')).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('multiple choice is off with a hint when fewer than four meanings are saved', () => {
+  two()
+  setup()
+  expect(modeButton('Multiple choice')).toBeDisabled()
+  expect(screen.getByText('Save at least 4 words to use multiple choice.')).toBeInTheDocument()
+})
+
+test('multiple choice shows the word and four meanings, one of them right', async () => {
+  four()
+  const { user } = setup()
+  await chooseMode(user)
+  expect(modeButton('Multiple choice')).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByText('Card 1 of 4')).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: 'Question' })).toHaveTextContent('alpha')
+  expect(choiceButtons()).toHaveLength(4)
+  expect(rightChoice('alpha')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
+})
+
+test('the right answer moves the word up, says Correct and shows the sentence', async () => {
+  four()
+  const { user } = setup()
+  await chooseMode(user)
+  await user.click(rightChoice('alpha'))
+  expect(boxOf('alpha')).toBe(2)
+  expect(screen.getByRole('status')).toHaveTextContent('Correct!')
+  expect(rightChoice('alpha')).toHaveTextContent('Correct')
+  expect(screen.getByText('alpha in a sentence')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Next' })).toHaveFocus()
+})
+
+test('a wrong answer sends the word back and marks both answers', async () => {
+  four()
+  const { user } = setup()
+  await chooseMode(user)
+  const wrong = choiceButtons().find((b) => !b.textContent.endsWith('alpha means'))
+  await user.click(wrong)
+  expect(boxOf('alpha')).toBe(1)
+  expect(wrong).toHaveTextContent('Not this one')
+  expect(rightChoice('alpha')).toHaveTextContent('Correct')
+  expect(screen.getByRole('status')).toHaveTextContent('Not quite.')
+})
+
+test('only the first pick counts', async () => {
+  four()
+  const { user } = setup()
+  await chooseMode(user)
+  const wrong = choiceButtons().find((b) => !b.textContent.endsWith('alpha means'))
+  await user.click(wrong)
+  await user.click(rightChoice('alpha'))
+  expect(boxOf('alpha')).toBe(1)
+  expect(wrong).toHaveTextContent('Not this one')
+})
+
+test('keys 1 to 4 pick an answer and Enter goes to the next word', async () => {
+  four()
+  const { user } = setup()
+  await chooseMode(user)
+  const place = choiceButtons().findIndex((b) => b.textContent.endsWith('alpha means'))
+  await user.keyboard(String(place + 1))
+  expect(screen.getByRole('status')).toHaveTextContent('Correct!')
+  await user.keyboard('{Enter}')
+  expect(screen.getByText('Card 2 of 4')).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: 'Question' })).toHaveTextContent('beta')
+})
+
+test('a full multiple-choice round ends on the results screen', async () => {
+  four()
+  const { user } = setup()
+  await chooseMode(user)
+  for (const word of ['alpha', 'beta', 'gamma', 'delta']) {
+    expect(screen.getByRole('region', { name: 'Question' })).toHaveTextContent(word)
+    await user.click(rightChoice(word))
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+  }
+  expect(screen.getByRole('heading', { level: 1, name: 'You knew 4 of 4 words' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Practise again' }))
+  expect(screen.getByRole('region', { name: 'Question' })).toBeInTheDocument()
+})
+
+test('flashcard keys do nothing in multiple-choice mode', async () => {
+  four()
+  const { user } = setup()
+  await chooseMode(user)
+  await user.keyboard(' ')
+  expect(screen.queryByText('alpha means', { selector: '.flashcard-meaning' })).not.toBeInTheDocument()
+  expect(boxOf('alpha')).toBe(1)
+})
+
+test('switching mode starts a new round', async () => {
+  four()
+  const { user } = setup()
+  await user.keyboard(' ')
+  await user.keyboard('2')
+  expect(screen.getByText('Card 2 of 4')).toBeInTheDocument()
+  await chooseMode(user)
+  expect(screen.getByText('Card 1 of 4')).toBeInTheDocument()
+  await user.click(modeButton('Flashcards'))
+  expect(screen.getByRole('button', { name: /^Show meaning of / })).toBeInTheDocument()
+})
