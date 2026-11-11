@@ -69,6 +69,11 @@ export default function PracticePage() {
     const forgotten = answers.filter((a) => !a.knew).map((a) => a.word)
     return (
       <main className="page narrow-page">
+        <div className="confetti" aria-hidden="true">
+          {Array.from({ length: 10 }, (_, i) => (
+            <span key={i} className={`confetti-piece confetti-${i % 4}`} style={{ '--n': i }} />
+          ))}
+        </div>
         <section className="score-card" aria-label="Your result">
           <p className="score-kicker">Round finished</p>
           <h1>

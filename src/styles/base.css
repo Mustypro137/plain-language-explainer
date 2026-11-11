@@ -204,16 +204,6 @@ a {
   }
 }
 
-/* Motion off for people who ask for it */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
 /* Small layout helpers */
 .stack-sm {
   display: flex;
@@ -791,4 +781,173 @@ kbd {
 .btn-primary + .btn-outline {
   min-height: 52px;
   font-size: 18px;
+}
+
+/* Motion: small, 150 to 400ms, each tells the user something happened */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes sweep {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+
+@keyframes flip-in {
+  from {
+    transform: perspective(900px) rotateY(90deg);
+  }
+  to {
+    transform: perspective(900px) rotateY(0);
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(-20px) rotate(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(260px) rotate(300deg);
+  }
+}
+
+.page {
+  animation: fade-in 250ms ease-out;
+}
+
+.main-nav a {
+  transition: border-bottom-color 200ms ease;
+}
+
+.btn {
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.btn-primary:active:not(:disabled),
+.btn-violet:active,
+.btn-answer:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.explain-right > .result-card {
+  animation: rise-in 300ms ease-out both;
+}
+
+.explain-right > .result-card:nth-of-type(2) {
+  animation-delay: 60ms;
+}
+
+.explain-right > .result-card:nth-of-type(3) {
+  animation-delay: 120ms;
+}
+
+.explain-right > .result-card:nth-of-type(4) {
+  animation-delay: 180ms;
+}
+
+.explain-right > .result-card:nth-of-type(5) {
+  animation-delay: 240ms;
+}
+
+.skeleton-card {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.word-name-saved {
+  background-image: linear-gradient(var(--sunshine), var(--sunshine));
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  animation: sweep 400ms ease-out;
+}
+
+.flashcard-back {
+  animation: flip-in 400ms ease-out;
+}
+
+.progress-fill {
+  transition: width 300ms ease;
+}
+
+.confetti {
+  position: relative;
+  height: 0;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  left: calc(8% + var(--n) * 9%);
+  width: 12px;
+  height: 12px;
+  border: var(--border);
+  opacity: 0;
+  animation: confetti-fall 1.4s ease-in 1 both;
+  animation-delay: calc(var(--n) * 70ms);
+}
+
+.confetti-0 {
+  background: var(--sunshine);
+}
+
+.confetti-1 {
+  background: var(--coral);
+  border-radius: 50%;
+}
+
+.confetti-2 {
+  background: var(--teal);
+}
+
+.confetti-3 {
+  background: var(--violet);
+  border-radius: 50%;
+}
+
+/* Motion off for people who ask for it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti {
+    display: none;
+  }
 }
