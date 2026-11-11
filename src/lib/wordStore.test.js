@@ -63,3 +63,17 @@ test('reports a storage failure instead of throwing', () => {
   })
   expect(saveWord(entry('x'))).toEqual({ ok: false, reason: 'storage' })
 })
+
+test('skips broken entries inside an otherwise valid list', () => {
+  const good = { id: 'g', word: 'good', meaning: 'm', sentence: 's', savedAt: '2026-01-01T00:00:00Z', box: 2 }
+  localStorage.setItem('ple.words.v1', JSON.stringify([null, 5, { word: 'no id' }, { ...good, id: 'b', box: 9 }, good]))
+  expect(listWords()).toEqual([good])
+  expect(() => hasWord('anything')).not.toThrow()
+  expect(hasWord('GOOD')).toBe(true)
+})
+
+test('saving after broken entries drops them and keeps the good words', () => {
+  localStorage.setItem('ple.words.v1', JSON.stringify([null]))
+  expect(saveWord(entry('fresh')).ok).toBe(true)
+  expect(listWords().map((w) => w.word)).toEqual(['fresh'])
+})
