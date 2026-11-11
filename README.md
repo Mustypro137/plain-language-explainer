@@ -4,7 +4,7 @@ A web app for beginner developers who find technical English hard. Paste documen
 
 ![The Explain screen showing a five-part answer](docs/screenshot.png)
 
-**Live site:** _add the Vercel link here after the first deploy_
+**Live site:** https://plain-language-explainer.vercel.app
 
 ## What it does
 
