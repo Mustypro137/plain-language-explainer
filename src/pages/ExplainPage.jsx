@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import ResultCard from '../components/ResultCard.jsx'
 import Skeleton from '../components/Skeleton.jsx'
@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast.jsx'
 import { explainText } from '../lib/explainText.js'
 import { formatDate } from '../lib/formatDate.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
+import { formatWait } from '../lib/formatWait.js'
 import { addHistory, getHistoryItem } from '../lib/historyStore.js'
 import { hasWord, saveWord } from '../lib/wordStore.js'
 
@@ -21,6 +22,12 @@ const ERROR_MESSAGES = {
 }
 
 const LEVEL_NOTES = { simpler: 'Simpler version', detail: 'More detailed version' }
+
+const LIMIT_TITLES = {
+  minute: 'The free AI limit is used up for this minute.',
+  day: 'The free AI limit is used up for today.',
+  unknown: 'The free AI limit is used up.',
+}
 
 const wordKey = (word) => word.trim().toLowerCase()
 
@@ -38,10 +45,21 @@ export default function ExplainPage() {
   const [saved, setSaved] = useState(() => (opened ? savedKeys(opened.result.words) : new Set()))
   // The text and level that the answer (or error) on screen belongs to.
   const [request, setRequest] = useState(opened ? { text: opened.text, level: null } : null)
+  // Set when the free AI limit is used up: { until (ms), total (seconds), limit }.
+  const [wait, setWait] = useState(null)
+  const [now, setNow] = useState(() => Date.now())
 
+  const remaining = wait ? Math.max(0, Math.ceil((wait.until - now) / 1000)) : 0
+  const waiting = remaining > 0
   const tooLong = text.length > MAX_CHARS
   const loading = status === 'loading'
-  const canExplain = text.trim() !== '' && !tooLong && !loading
+  const canExplain = text.trim() !== '' && !tooLong && !loading && !waiting
+
+  useEffect(() => {
+    if (!waiting) return undefined
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [waiting])
 
   function explain() {
     if (!canExplain) return
@@ -49,11 +67,12 @@ export default function ExplainPage() {
   }
 
   async function run(req) {
-    if (loading) return
+    if (loading || waiting) return
     setRequest(req)
     setStatus('loading')
     setResult(null)
     setError(null)
+    setWait(null)
     setOpened(null)
     if (params.has('item')) setParams({}, { replace: true })
     const answer = await (req.level ? explainText(req.text, req.level) : explainText(req.text))
@@ -63,6 +82,11 @@ export default function ExplainPage() {
       setResult(answer.data)
       setStatus('done')
     } else {
+      if (answer.error === 'busy' && answer.retryAfter) {
+        const start = Date.now()
+        setWait({ until: start + answer.retryAfter * 1000, total: answer.retryAfter, limit: answer.limit ?? null })
+        setNow(start)
+      }
       setError(answer.error)
       setStatus('error')
     }
@@ -151,8 +175,23 @@ export default function ExplainPage() {
 
           {error && (
             <div className="error-box" role="alert">
-              <span>{ERROR_MESSAGES[error]}</span>
-              {error === 'offline' && (
+              {error === 'busy' && wait ? (
+                <div className="wait-text">
+                  <span>{LIMIT_TITLES[wait.limit ?? 'unknown']}</span>
+                  {waiting ? (
+                    <>
+                      {/* Screen readers hear the wait once; the visible line counts down. */}
+                      <span className="visually-hidden">You can try again in {formatWait(wait.total)}.</span>
+                      <span aria-hidden="true">You can try again in {formatWait(remaining)}.</span>
+                    </>
+                  ) : (
+                    <span>You can try again now.</span>
+                  )}
+                </div>
+              ) : (
+                <span>{ERROR_MESSAGES[error]}</span>
+              )}
+              {(error === 'offline' || (error === 'busy' && wait && !waiting)) && (
                 <button type="button" className="btn btn-outline" onClick={() => run(request)}>
                   Try again
                 </button>

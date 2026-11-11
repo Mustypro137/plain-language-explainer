@@ -59,3 +59,13 @@ test('a rejected level is reported', async () => {
   stubFetch(400, { error: 'bad_level' })
   expect(await explainText('x', 'detail')).toEqual({ ok: false, error: 'bad_level' })
 })
+
+test('busy passes on the wait time and the limit', async () => {
+  stubFetch(429, { error: 'busy', retryAfter: 8, limit: 'minute' })
+  expect(await explainText('x')).toEqual({ ok: false, error: 'busy', retryAfter: 8, limit: 'minute' })
+})
+
+test('busy without a usable wait time stays plain busy', async () => {
+  stubFetch(429, { error: 'busy', retryAfter: 'soon', limit: 'week' })
+  expect(await explainText('x')).toEqual({ ok: false, error: 'busy' })
+})

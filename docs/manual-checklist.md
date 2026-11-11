@@ -44,6 +44,8 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] Explain: after an answer, "Make it simpler" and "More detail" each return a new answer with "Simpler version" or "More detailed version", and the Network tab shows `level` in the request.
 - [ ] My Words: new saved words show a topic; words saved before topics show General. The new / learning / known numbers match the cards, and topic buttons filter the list together with search.
 
+- [ ] Free limit: press Explain several times quickly until the limit is hit. The box says "used up for this minute" and counts down; Explain stays off until it reaches 0, then "Try again" works.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.

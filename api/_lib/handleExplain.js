@@ -1,6 +1,17 @@
 import { parseAiAnswer, validateLevel, validateText } from './validate.js'
 
 const ATTEMPTS = 2
+const MAX_WAIT = 24 * 60 * 60
+
+// What the browser needs to show "You can try again in …". Anything odd is left out.
+function busyBody(err) {
+  const body = { error: 'busy' }
+  const wait = err.retryAfter
+  if (typeof wait !== 'number' || !Number.isFinite(wait) || wait <= 0) return body
+  body.retryAfter = Math.min(Math.ceil(wait), MAX_WAIT)
+  if (err.limit === 'minute' || err.limit === 'day') body.limit = err.limit
+  return body
+}
 
 export async function handleExplain(body, askAi) {
   const checked = validateText(body?.text)
@@ -13,7 +24,7 @@ export async function handleExplain(body, askAi) {
     try {
       raw = await askAi(checked.text, level.level)
     } catch (err) {
-      if (err?.status === 429) return { status: 429, body: { error: 'busy' } }
+      if (err?.status === 429) return { status: 429, body: busyBody(err) }
       continue
     }
     const answer = parseAiAnswer(raw)
