@@ -19,7 +19,7 @@ const good = {
   why: 'w',
   steps: ['1', '2'],
   example: 'x',
-  words: [{ word: 'undefined', meaning: 'm', sentence: 's' }],
+  words: [{ word: 'undefined', meaning: 'm', sentence: 's', topic: 'JavaScript' }],
 }
 
 test('reads a good answer', () => expect(parseAiAnswer(JSON.stringify(good))).toEqual(good))
@@ -51,7 +51,7 @@ test('drops words with missing fields', () => {
       { word: 'b', sentence: 's' },
     ],
   })
-  expect(parseAiAnswer(raw).words).toEqual([{ word: 'a', meaning: 'm', sentence: 's' }])
+  expect(parseAiAnswer(raw).words).toEqual([{ word: 'a', meaning: 'm', sentence: 's', topic: 'General' }])
 })
 
 test('missing example becomes an empty string', () => {
@@ -77,3 +77,15 @@ test.each([['simpler'], ['detail']])('%s is a level', (v) => expect(validateLeve
 test.each([['harder'], [''], [1], [{}], ['SIMPLER']])('%p is not a level', (v) =>
   expect(validateLevel(v)).toEqual({ ok: false, error: 'bad_level' }),
 )
+
+test('each word keeps a topic from the fixed list', () => {
+  const raw = JSON.stringify({
+    ...good,
+    words: [
+      { word: 'a', meaning: 'm', sentence: 's', topic: 'react' },
+      { word: 'b', meaning: 'm', sentence: 's', topic: 'Cooking' },
+      { word: 'c', meaning: 'm', sentence: 's' },
+    ],
+  })
+  expect(parseAiAnswer(raw).words.map((w) => w.topic)).toEqual(['React', 'General', 'General'])
+})

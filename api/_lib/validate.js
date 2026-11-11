@@ -1,3 +1,5 @@
+import { normaliseTopic } from '../../shared/topics.js'
+
 export const MAX_CHARS = 3000
 const MAX_STEPS = 3
 const MAX_WORDS = 8
@@ -44,7 +46,7 @@ export function parseAiAnswer(raw) {
     ? data.words
         .filter((w) => w && isText(w.word) && isText(w.meaning) && isText(w.sentence))
         .slice(0, MAX_WORDS)
-        .map(({ word, meaning, sentence }) => ({ word, meaning, sentence }))
+        .map(({ word, meaning, sentence, topic }) => ({ word, meaning, sentence, topic: normaliseTopic(topic) }))
     : []
 
   return {

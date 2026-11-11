@@ -25,3 +25,11 @@ test('the JSON keys stay the same at every level', () => {
     for (const key of ['"kind"', '"explanation"', '"why"', '"steps"', '"example"', '"words"']) expect(system.content).toContain(key)
   }
 })
+
+test('asks for a topic from the fixed list on each word', () => {
+  const [system] = buildMessages('t', null)
+  expect(system.content).toContain('"topic"')
+  for (const topic of ['JavaScript', 'React', 'CSS', 'HTML', 'Node and npm', 'Git', 'Web and HTTP', 'General']) {
+    expect(system.content).toContain(topic)
+  }
+})

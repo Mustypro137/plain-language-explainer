@@ -6,7 +6,7 @@ const good = {
   why: 'w',
   steps: ['1'],
   example: 'x',
-  words: [{ word: 'undefined', meaning: 'm', sentence: 's' }],
+  words: [{ word: 'undefined', meaning: 'm', sentence: 's', topic: 'JavaScript' }],
 }
 
 test('400 for empty text, AI not called', async () => {

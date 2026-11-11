@@ -67,7 +67,7 @@ test('reports a storage failure instead of throwing', () => {
 test('skips broken entries inside an otherwise valid list', () => {
   const good = { id: 'g', word: 'good', meaning: 'm', sentence: 's', savedAt: '2026-01-01T00:00:00Z', box: 2 }
   localStorage.setItem('ple.words.v1', JSON.stringify([null, 5, { word: 'no id' }, { ...good, id: 'b', box: 9 }, good]))
-  expect(listWords()).toEqual([good])
+  expect(listWords()).toEqual([{ ...good, topic: 'General' }])
   expect(() => hasWord('anything')).not.toThrow()
   expect(hasWord('GOOD')).toBe(true)
 })
@@ -76,4 +76,23 @@ test('saving after broken entries drops them and keeps the good words', () => {
   localStorage.setItem('ple.words.v1', JSON.stringify([null]))
   expect(saveWord(entry('fresh')).ok).toBe(true)
   expect(listWords().map((w) => w.word)).toEqual(['fresh'])
+})
+
+test('saves the topic of a word', () => {
+  const r = saveWord({ word: 'useState', meaning: 'm', sentence: 's', topic: 'react' })
+  expect(r.word.topic).toBe('React')
+  expect(listWords()[0].topic).toBe('React')
+})
+
+test('a word saved without a topic, or with an unknown one, lists as General', () => {
+  saveWord(entry('plain'))
+  saveWord({ ...entry('odd'), topic: 'Cooking' })
+  expect(listWords().map((w) => w.topic)).toEqual(['General', 'General'])
+})
+
+test('words saved before topics existed list as General and are not rewritten', () => {
+  const old = { id: 'o', word: 'old', meaning: 'm', sentence: 's', savedAt: '2026-01-01T00:00:00Z', box: 2 }
+  localStorage.setItem('ple.words.v1', JSON.stringify([old]))
+  expect(listWords()).toEqual([{ ...old, topic: 'General' }])
+  expect(JSON.parse(localStorage.getItem('ple.words.v1'))).toEqual([old])
 })

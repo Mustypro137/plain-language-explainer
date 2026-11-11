@@ -1,3 +1,5 @@
+import { normaliseTopic } from '../../shared/topics.js'
+
 const KEY = 'ple.words.v1'
 
 const isText = (v) => typeof v === 'string'
@@ -35,8 +37,9 @@ function write(words) {
 
 const normalise = (word) => String(word).trim().toLowerCase()
 
+// Words saved before topics existed have none; they show as General without being rewritten.
 export function listWords() {
-  return read()
+  return read().map((w) => ({ ...w, topic: normaliseTopic(w.topic) }))
 }
 
 export function hasWord(word) {
@@ -44,13 +47,14 @@ export function hasWord(word) {
   return read().some((w) => normalise(w.word) === key)
 }
 
-export function saveWord({ word, meaning, sentence }) {
+export function saveWord({ word, meaning, sentence, topic }) {
   if (hasWord(word)) return { ok: false, reason: 'duplicate' }
   const saved = {
     id: crypto.randomUUID(),
     word: word.trim(),
     meaning,
     sentence,
+    topic: normaliseTopic(topic),
     savedAt: new Date().toISOString(),
     box: 1,
   }
