@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { ToastProvider } from '../components/Toast.jsx'
 import { explainText } from '../lib/explainText.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
+import { addHistory, listHistory } from '../lib/historyStore.js'
 import { hasWord, listWords, saveWord } from '../lib/wordStore.js'
 import ExplainPage from './ExplainPage.jsx'
 
@@ -21,12 +23,20 @@ const errorData = {
 }
 const docsData = { ...errorData, kind: 'docs', steps: [] }
 
-function setup() {
+function Address() {
+  const { pathname, search } = useLocation()
+  return <span data-testid="address">{pathname + search}</span>
+}
+
+function setup(path = '/') {
   const user = userEvent.setup()
   render(
-    <ToastProvider>
-      <ExplainPage />
-    </ToastProvider>,
+    <MemoryRouter initialEntries={[path]}>
+      <ToastProvider>
+        <ExplainPage />
+        <Address />
+      </ToastProvider>
+    </MemoryRouter>,
   )
   return user
 }
@@ -53,7 +63,9 @@ test('Explain is disabled until text is typed', async () => {
 
 test('shows the secret-key note and the count', async () => {
   const user = setup()
-  expect(screen.getByText('Do not paste passwords or secret keys.')).toBeInTheDocument()
+  expect(
+    screen.getByText('Do not paste passwords or secret keys. Explanations are kept in History in this browser.'),
+  ).toBeInTheDocument()
   expect(screen.getByText('0 / 3,000')).toBeInTheDocument()
   await user.type(screen.getByLabelText('Your text'), 'hello')
   expect(screen.getByText('5 / 3,000')).toBeInTheDocument()
@@ -171,4 +183,71 @@ test('Copy explanation writes the formatted text to the clipboard', async () => 
   await user.click(await screen.findByRole('button', { name: 'Copy explanation' }))
   expect(await navigator.clipboard.readText()).toBe(formatExplanation(errorData))
   expect(screen.getByRole('status')).toHaveTextContent('Copied')
+})
+
+test('a successful explanation is kept in History', async () => {
+  explainText.mockResolvedValue({ ok: true, data: errorData })
+  const user = setup()
+  await submit(user, '  some text  ')
+  await screen.findByRole('heading', { level: 3, name: 'In simple words' })
+  const list = listHistory()
+  expect(list).toHaveLength(1)
+  expect(list[0].text).toBe('some text')
+  expect(list[0].result).toEqual(errorData)
+})
+
+test('a failed explanation is not kept in History', async () => {
+  explainText.mockResolvedValue({ ok: false, error: 'busy' })
+  const user = setup()
+  await submit(user)
+  await screen.findByRole('alert')
+  expect(listHistory()).toEqual([])
+})
+
+test('still shows the explanation when History cannot be saved', async () => {
+  explainText.mockResolvedValue({ ok: true, data: errorData })
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new Error('full')
+  })
+  const user = setup()
+  await submit(user)
+  expect(await screen.findByText(errorData.explanation)).toBeInTheDocument()
+})
+
+test('opens a History entry without asking the AI', () => {
+  const item = addHistory({ text: 'old pasted text', result: errorData })
+  setup(`/?item=${item.id}`)
+  expect(screen.getByLabelText('Your text')).toHaveValue('old pasted text')
+  expect(screen.getByText(errorData.explanation)).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 3, name: 'What to try next' })).toBeInTheDocument()
+  expect(screen.getByText(/From your history/)).toBeInTheDocument()
+  expect(screen.getByText(/From your history/).querySelector('time')).toHaveAttribute('datetime', item.savedAt)
+  expect(explainText).not.toHaveBeenCalled()
+})
+
+test('a History entry shows words already in My Words as Saved', () => {
+  saveWord(errorData.words[0])
+  const item = addHistory({ text: 'old pasted text', result: errorData })
+  setup(`/?item=${item.id}`)
+  expect(screen.getByRole('button', { name: 'Saved undefined' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Save property' })).toBeEnabled()
+})
+
+test('an unknown History entry shows the empty Explain page', () => {
+  setup('/?item=missing')
+  expect(screen.getByLabelText('Your text')).toHaveValue('')
+  expect(screen.queryByRole('heading', { level: 2, name: 'Explanation' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('explaining again leaves the History entry and clears it from the address', async () => {
+  const item = addHistory({ text: 'old pasted text', result: errorData })
+  explainText.mockResolvedValue({ ok: true, data: { ...docsData, explanation: 'A fresh answer.' } })
+  const user = setup(`/?item=${item.id}`)
+  expect(screen.getByTestId('address')).toHaveTextContent(`/?item=${item.id}`)
+  await user.click(explainButton())
+  expect(await screen.findByText('A fresh answer.')).toBeInTheDocument()
+  expect(screen.queryByText(/From your history/)).not.toBeInTheDocument()
+  expect(screen.getByTestId('address')).toHaveTextContent(/^\/$/)
+  expect(explainText).toHaveBeenCalledWith('old pasted text')
 })

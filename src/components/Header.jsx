@@ -16,6 +16,7 @@ export default function Header() {
           </NavLink>
           <NavLink to="/words">My Words</NavLink>
           <NavLink to="/practice">Practice</NavLink>
+          <NavLink to="/history">History</NavLink>
         </nav>
       </div>
     </header>
