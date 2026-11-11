@@ -603,3 +603,192 @@ a {
 .empty-state h2 {
   font-size: 28px;
 }
+
+/* Practice */
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.progress-label {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.progress {
+  flex: 1;
+  height: 16px;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--violet);
+}
+
+.flashcard {
+  width: 100%;
+  min-height: 340px;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  text-align: center;
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: 8px 8px 0 var(--violet);
+  background: var(--card);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+button.flashcard {
+  cursor: pointer;
+}
+
+.flashcard-word {
+  padding: 0 16px;
+  border-radius: 6px;
+  background: var(--sunshine);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(36px, 8vw, 52px);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.flashcard-meaning {
+  margin: 0;
+  max-width: 520px;
+  font-size: 22px;
+}
+
+.flashcard-sentence {
+  margin: 0;
+  max-width: 520px;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--soft-ink);
+}
+
+.answer-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.btn-answer {
+  min-height: 60px;
+  gap: 12px;
+  box-shadow: var(--shadow);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.btn-answer:disabled {
+  box-shadow: none;
+}
+
+.btn-forgot {
+  background: var(--coral);
+  color: var(--ink);
+}
+
+.btn-knew {
+  background: var(--teal);
+  color: #ffffff;
+}
+
+kbd {
+  padding: 1px 8px;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.hint {
+  font-size: 16px;
+  text-align: center;
+}
+
+/* Practice results */
+.score-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 36px 32px;
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: var(--violet);
+  color: #ffffff;
+}
+
+.score-card h1 {
+  font-size: clamp(32px, 7vw, 52px);
+}
+
+.score-card p {
+  margin: 0;
+}
+
+.score-kicker {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.score-bars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.score-bar {
+  width: 56px;
+  height: 20px;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--card);
+}
+
+.score-bar-on {
+  background: var(--sunshine);
+}
+
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 24px;
+}
+
+.review-card p {
+  margin: 0;
+}
+
+.review-word {
+  align-self: flex-start;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: var(--coral);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 22px;
+}
+
+.btn-primary + .btn-outline {
+  min-height: 52px;
+  font-size: 18px;
+}
