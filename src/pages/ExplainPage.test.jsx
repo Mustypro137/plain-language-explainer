@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { ToastProvider } from '../components/Toast.jsx'
@@ -341,4 +341,76 @@ test('an entry opened from History can be explained differently', async () => {
   expect(explainText).toHaveBeenLastCalledWith('old pasted text', 'simpler')
   expect(screen.queryByText(/From your history/)).not.toBeInTheDocument()
   expect(detail()).toBeEnabled()
+})
+
+describe('when the free AI limit is used up', () => {
+  // Fake clock, so the countdown can be moved on without waiting.
+  let user
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  })
+  afterEach(() => vi.useRealTimers())
+
+  function show() {
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <ExplainPage />
+        </ToastProvider>
+      </MemoryRouter>,
+    )
+  }
+  const tick = (ms) => act(() => vi.advanceTimersByTime(ms))
+
+  test('shows which limit and counts down the wait', async () => {
+    explainText.mockResolvedValue({ ok: false, error: 'busy', retryAfter: 8, limit: 'minute' })
+    show()
+    await submit(user)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('The free AI limit is used up for this minute.')
+    expect(screen.getByText('You can try again in 8 seconds.', { selector: '[aria-hidden="true"]' })).toBeInTheDocument()
+    tick(3000)
+    expect(screen.getByText('You can try again in 5 seconds.', { selector: '[aria-hidden="true"]' })).toBeInTheDocument()
+  })
+
+  test('tells screen readers the wait once, without reading every second', async () => {
+    explainText.mockResolvedValue({ ok: false, error: 'busy', retryAfter: 8, limit: 'minute' })
+    show()
+    await submit(user)
+    tick(3000)
+    expect(screen.getByText('You can try again in 8 seconds.', { selector: '.visually-hidden' })).toBeInTheDocument()
+  })
+
+  test('keeps Explain off until the wait is over, then offers Try again', async () => {
+    explainText.mockResolvedValueOnce({ ok: false, error: 'busy', retryAfter: 2, limit: 'minute' })
+    show()
+    await submit(user)
+    await screen.findByRole('alert')
+    expect(explainButton()).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    tick(2000)
+    expect(screen.getByText('You can try again now.')).toBeInTheDocument()
+    expect(explainButton()).toBeEnabled()
+    explainText.mockResolvedValueOnce({ ok: true, data: errorData })
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText(errorData.explanation)).toBeInTheDocument()
+    expect(explainText).toHaveBeenCalledTimes(2)
+  })
+
+  test('says "for today" and uses hours for the daily limit', async () => {
+    explainText.mockResolvedValue({ ok: false, error: 'busy', retryAfter: 8001, limit: 'day' })
+    show()
+    await submit(user)
+    expect(await screen.findByRole('alert')).toHaveTextContent('The free AI limit is used up for today.')
+    expect(screen.getByText('You can try again in 2 hours 14 minutes.', { selector: '[aria-hidden="true"]' })).toBeInTheDocument()
+  })
+
+  test('without a wait time it shows the old busy message', async () => {
+    explainText.mockResolvedValue({ ok: false, error: 'busy' })
+    show()
+    await submit(user)
+    expect(await screen.findByRole('alert')).toHaveTextContent('The service is busy. Please try again in a minute.')
+    expect(explainButton()).toBeEnabled()
+  })
 })

@@ -15,5 +15,11 @@ export async function explainText(text, level) {
 
   const body = await res.json().catch(() => ({}))
   if (res.status === 200) return { ok: true, data: body }
-  return { ok: false, error: KNOWN_ERRORS.includes(body?.error) ? body.error : 'ai_failed' }
+  const error = KNOWN_ERRORS.includes(body?.error) ? body.error : 'ai_failed'
+  const wait = body?.retryAfter
+  if (error === 'busy' && Number.isInteger(wait) && wait > 0) {
+    const limit = body.limit === 'minute' || body.limit === 'day' ? body.limit : null
+    return { ok: false, error, retryAfter: wait, ...(limit && { limit }) }
+  }
+  return { ok: false, error }
 }

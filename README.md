@@ -8,7 +8,7 @@ A web app for beginner developers who find technical English hard. Paste documen
 
 ## What it does
 
-- **Explain** – paste up to 3,000 characters. One AI call returns five parts. "What to try next" appears only for error messages. Copy the whole answer as plain text. "Not clear?" asks again for a simpler or a more detailed version (one more AI call each).
+- **Explain** – paste up to 3,000 characters. One AI call returns five parts. "What to try next" appears only for error messages. Copy the whole answer as plain text. "Not clear?" asks again for a simpler or a more detailed version (one more AI call each). If the free Groq limit is used up, the app says whether it is the per-minute or per-day limit and counts down until you can try again.
 - **My Words** – the words you saved, with meaning, source sentence, learning level and topic (the AI picks one of: JavaScript, React, CSS, HTML, Node and npm, Git, Web and HTTP, General). See how many words are new, learning and known, filter by topic, search, delete, and export everything as a JSON file.
 - **Practice** – flashcards from your saved words, up to ten per round, lowest level first. Space flips the card, `1` means "I forgot", `2` means "I knew it". Or switch to multiple choice (with 4 or more saved words): pick the right meaning of four, with keys `1` to `4`. A results screen lists the words to review.
 - **History** – the last 20 explanations, newest first. Open one to read it again without a new AI call, delete one, or clear them all.

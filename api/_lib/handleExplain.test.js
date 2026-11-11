@@ -84,3 +84,23 @@ test('400 bad_level for an unknown level, AI not called', async () => {
   expect(await handleExplain({ text: 'hi', level: 'harder' }, askAi)).toEqual({ status: 400, body: { error: 'bad_level' } })
   expect(askAi).not.toHaveBeenCalled()
 })
+
+const limitError = (extra) => Object.assign(new Error('rate'), { status: 429, ...extra })
+
+test('429 busy passes on the wait time and which limit was hit', async () => {
+  const askAi = vi.fn().mockRejectedValue(limitError({ retryAfter: 5, limit: 'minute' }))
+  expect(await handleExplain({ text: 'hi' }, askAi)).toEqual({
+    status: 429,
+    body: { error: 'busy', retryAfter: 5, limit: 'minute' },
+  })
+})
+
+test.each([[0], [-3], [Number.NaN], ['5'], [null]])('a wait time of %p is left out', async (retryAfter) => {
+  const askAi = vi.fn().mockRejectedValue(limitError({ retryAfter, limit: 'other' }))
+  expect(await handleExplain({ text: 'hi' }, askAi)).toEqual({ status: 429, body: { error: 'busy' } })
+})
+
+test('a very long wait is capped at one day', async () => {
+  const askAi = vi.fn().mockRejectedValue(limitError({ retryAfter: 999999, limit: 'day' }))
+  expect((await handleExplain({ text: 'hi' }, askAi)).body).toEqual({ error: 'busy', retryAfter: 86400, limit: 'day' })
+})

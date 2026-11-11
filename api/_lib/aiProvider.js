@@ -30,6 +30,24 @@ export function buildMessages(text, level) {
   ]
 }
 
+const UNIT_SECONDS = { h: 3600, m: 60, s: 1, ms: 0.001 }
+
+// Groq's limit message says how long to wait ("Please try again in 2m13.5s") and which
+// limit was hit ("tokens per minute", "requests per day"). The retry-after header is a fallback.
+export function readRateLimit(message, retryAfterHeader) {
+  const text = typeof message === 'string' ? message : ''
+  let seconds = null
+  const wait = text.match(/try again in ((?:\d+(?:\.\d+)?(?:ms|h|m|s))+)/)
+  if (wait) {
+    seconds = 0
+    for (const [, n, unit] of wait[1].matchAll(/(\d+(?:\.\d+)?)(ms|h|m|s)/g)) seconds += Number(n) * UNIT_SECONDS[unit]
+  } else if (/^\d+(\.\d+)?$/.test(String(retryAfterHeader ?? '').trim())) {
+    seconds = Number(retryAfterHeader)
+  }
+  const limit = /per day/i.test(text) ? 'day' : /per minute/i.test(text) ? 'minute' : null
+  return { retryAfter: seconds === null ? null : Math.max(1, Math.ceil(seconds)), limit }
+}
+
 export async function askAi(text, level = null) {
   const res = await fetch(ENDPOINT, {
     method: 'POST',
@@ -44,6 +62,11 @@ export async function askAi(text, level = null) {
       messages: buildMessages(text, level),
     }),
   })
+  if (res.status === 429) {
+    const body = await res.json().catch(() => ({}))
+    const info = readRateLimit(body?.error?.message, res.headers?.get('retry-after'))
+    throw Object.assign(new Error('Groq rate limit reached'), { status: 429, ...info })
+  }
   if (!res.ok) {
     throw Object.assign(new Error(`Groq answered ${res.status}`), { status: res.status })
   }
