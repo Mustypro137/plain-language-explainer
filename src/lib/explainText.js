@@ -1,12 +1,13 @@
-const KNOWN_ERRORS = ['empty', 'too_long', 'busy', 'ai_failed']
+const KNOWN_ERRORS = ['empty', 'too_long', 'busy', 'ai_failed', 'bad_level']
 
-export async function explainText(text) {
+// level: undefined for the normal explanation, or 'simpler' / 'detail'.
+export async function explainText(text, level) {
   let res
   try {
     res = await fetch('/api/explain', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(level ? { text, level } : { text }),
     })
   } catch {
     return { ok: false, error: 'offline' }

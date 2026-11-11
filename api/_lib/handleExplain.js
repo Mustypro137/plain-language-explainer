@@ -1,15 +1,17 @@
-import { parseAiAnswer, validateText } from './validate.js'
+import { parseAiAnswer, validateLevel, validateText } from './validate.js'
 
 const ATTEMPTS = 2
 
 export async function handleExplain(body, askAi) {
   const checked = validateText(body?.text)
   if (!checked.ok) return { status: 400, body: { error: checked.error } }
+  const level = validateLevel(body?.level)
+  if (!level.ok) return { status: 400, body: { error: level.error } }
 
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     let raw
     try {
-      raw = await askAi(checked.text)
+      raw = await askAi(checked.text, level.level)
     } catch (err) {
       if (err?.status === 429) return { status: 429, body: { error: 'busy' } }
       continue

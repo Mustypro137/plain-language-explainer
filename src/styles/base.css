@@ -595,6 +595,18 @@ a {
   gap: 12px;
 }
 
+/* "Not clear?" under an explanation */
+.explain-again {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.explain-again-label {
+  font-weight: 700;
+}
+
 /* History page: the cards reuse the word-card layout */
 .history-title {
   overflow: hidden;

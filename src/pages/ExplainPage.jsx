@@ -17,7 +17,10 @@ const ERROR_MESSAGES = {
   empty: 'Something went wrong. Please try again.',
   too_long: 'Please shorten the text',
   offline: 'No connection',
+  bad_level: 'Something went wrong. Please try again.',
 }
+
+const LEVEL_NOTES = { simpler: 'Simpler version', detail: 'More detailed version' }
 
 const wordKey = (word) => word.trim().toLowerCase()
 
@@ -33,22 +36,29 @@ export default function ExplainPage() {
   const [result, setResult] = useState(opened?.result ?? null)
   const [error, setError] = useState(null)
   const [saved, setSaved] = useState(() => (opened ? savedKeys(opened.result.words) : new Set()))
+  // The text and level that the answer (or error) on screen belongs to.
+  const [request, setRequest] = useState(opened ? { text: opened.text, level: null } : null)
 
   const tooLong = text.length > MAX_CHARS
   const loading = status === 'loading'
   const canExplain = text.trim() !== '' && !tooLong && !loading
 
-  async function explain() {
+  function explain() {
     if (!canExplain) return
-    const sent = text.trim()
+    run({ text: text.trim(), level: null })
+  }
+
+  async function run(req) {
+    if (loading) return
+    setRequest(req)
     setStatus('loading')
     setResult(null)
     setError(null)
     setOpened(null)
     if (params.has('item')) setParams({}, { replace: true })
-    const answer = await explainText(sent)
+    const answer = await (req.level ? explainText(req.text, req.level) : explainText(req.text))
     if (answer.ok) {
-      addHistory({ text: sent, result: answer.data })
+      addHistory({ text: req.text, result: answer.data })
       setSaved(savedKeys(answer.data.words))
       setResult(answer.data)
       setStatus('done')
@@ -137,11 +147,13 @@ export default function ExplainPage() {
             </p>
           )}
 
+          {result && request?.level && <p className="soft history-note">{LEVEL_NOTES[request.level]}</p>}
+
           {error && (
             <div className="error-box" role="alert">
               <span>{ERROR_MESSAGES[error]}</span>
               {error === 'offline' && (
-                <button type="button" className="btn btn-outline" onClick={explain}>
+                <button type="button" className="btn btn-outline" onClick={() => run(request)}>
                   Try again
                 </button>
               )}
@@ -198,6 +210,15 @@ export default function ExplainPage() {
                   </ul>
                 </ResultCard>
               )}
+              <div className="explain-again">
+                <span className="explain-again-label">Not clear?</span>
+                <button type="button" className="btn btn-outline" onClick={() => run({ text: request.text, level: 'simpler' })}>
+                  Make it simpler
+                </button>
+                <button type="button" className="btn btn-outline" onClick={() => run({ text: request.text, level: 'detail' })}>
+                  More detail
+                </button>
+              </div>
             </>
           )}
         </section>
