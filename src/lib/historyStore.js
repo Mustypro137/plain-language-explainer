@@ -29,6 +29,7 @@ function isItem(h) {
     isText(h.id) &&
     isText(h.text) &&
     isText(h.savedAt) &&
+    !Number.isNaN(Date.parse(h.savedAt)) &&
     isResult(h.result)
   )
 }

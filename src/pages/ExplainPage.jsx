@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import ResultCard from '../components/ResultCard.jsx'
 import Skeleton from '../components/Skeleton.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { explainText } from '../lib/explainText.js'
+import { formatDate } from '../lib/formatDate.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
+import { addHistory, getHistoryItem } from '../lib/historyStore.js'
 import { hasWord, saveWord } from '../lib/wordStore.js'
 
 const MAX_CHARS = 3000
@@ -18,13 +21,18 @@ const ERROR_MESSAGES = {
 
 const wordKey = (word) => word.trim().toLowerCase()
 
+const savedKeys = (words) => new Set(words.filter((w) => hasWord(w.word)).map((w) => wordKey(w.word)))
+
 export default function ExplainPage() {
   const toast = useToast()
-  const [text, setText] = useState('')
-  const [status, setStatus] = useState('idle') // idle | loading | done | error
-  const [result, setResult] = useState(null)
+  const [params, setParams] = useSearchParams()
+  // An entry opened from the History page: shown as it was saved, with no AI call.
+  const [opened, setOpened] = useState(() => getHistoryItem(params.get('item')) ?? null)
+  const [text, setText] = useState(opened?.text ?? '')
+  const [status, setStatus] = useState(opened ? 'done' : 'idle') // idle | loading | done | error
+  const [result, setResult] = useState(opened?.result ?? null)
   const [error, setError] = useState(null)
-  const [saved, setSaved] = useState(new Set())
+  const [saved, setSaved] = useState(() => (opened ? savedKeys(opened.result.words) : new Set()))
 
   const tooLong = text.length > MAX_CHARS
   const loading = status === 'loading'
@@ -32,12 +40,16 @@ export default function ExplainPage() {
 
   async function explain() {
     if (!canExplain) return
+    const sent = text.trim()
     setStatus('loading')
     setResult(null)
     setError(null)
-    const answer = await explainText(text.trim())
+    setOpened(null)
+    if (params.has('item')) setParams({}, { replace: true })
+    const answer = await explainText(sent)
     if (answer.ok) {
-      setSaved(new Set(answer.data.words.filter((w) => hasWord(w.word)).map((w) => wordKey(w.word))))
+      addHistory({ text: sent, result: answer.data })
+      setSaved(savedKeys(answer.data.words))
       setResult(answer.data)
       setStatus('done')
     } else {
@@ -87,7 +99,7 @@ export default function ExplainPage() {
             onChange={(e) => setText(e.target.value)}
           />
           <div className="paste-meta">
-            <span>Do not paste passwords or secret keys.</span>
+            <span>Do not paste passwords or secret keys. Explanations are kept in History in this browser.</span>
             <span className={tooLong ? 'count-over' : undefined}>
               {text.length.toLocaleString('en-US')} / {MAX_CHARS.toLocaleString('en-US')}
             </span>
@@ -118,6 +130,12 @@ export default function ExplainPage() {
               </button>
             )}
           </div>
+
+          {opened && (
+            <p className="soft history-note">
+              From your history · <time dateTime={opened.savedAt}>{formatDate(opened.savedAt)}</time>
+            </p>
+          )}
 
           {error && (
             <div className="error-box" role="alert">

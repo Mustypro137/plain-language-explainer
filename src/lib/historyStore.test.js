@@ -109,6 +109,7 @@ test('skips broken entries inside an otherwise valid list', () => {
       stored({ id: 'w', result: result({ words: [{ word: 'no meaning' }] }) }),
       stored({ id: 'e', result: result({ example: null }) }),
       stored({ id: 'r', result: null }),
+      stored({ id: 'd', savedAt: 'not a date' }),
       good,
     ]),
   )
