@@ -8,9 +8,9 @@ A web app for beginner developers who find technical English hard. Paste documen
 
 ## What it does
 
-- **Explain** – paste up to 3,000 characters. One AI call returns five parts. "What to try next" appears only for error messages. Copy the whole answer as plain text.
-- **My Words** – the words you saved, with meaning, source sentence and learning level. Search, delete, and export everything as a JSON file.
-- **Practice** – flashcards from your saved words, up to ten per round, lowest level first. Space flips the card, `1` means "I forgot", `2` means "I knew it". A results screen lists the words to review.
+- **Explain** – paste up to 3,000 characters. One AI call returns five parts. "What to try next" appears only for error messages. Copy the whole answer as plain text. "Not clear?" asks again for a simpler or a more detailed version (one more AI call each).
+- **My Words** – the words you saved, with meaning, source sentence, learning level and topic (the AI picks one of: JavaScript, React, CSS, HTML, Node and npm, Git, Web and HTTP, General). See how many words are new, learning and known, filter by topic, search, delete, and export everything as a JSON file.
+- **Practice** – flashcards from your saved words, up to ten per round, lowest level first. Space flips the card, `1` means "I forgot", `2` means "I knew it". Or switch to multiple choice (with 4 or more saved words): pick the right meaning of four, with keys `1` to `4`. A results screen lists the words to review.
 - **History** – the last 20 explanations, newest first. Open one to read it again without a new AI call, delete one, or clear them all.
 - **Dark mode** – follows your device's light or dark setting. The sun/moon button in the top bar switches it, and the choice is remembered in this browser.
 
@@ -44,9 +44,9 @@ The manual release checks are in [`docs/manual-checklist.md`](docs/manual-checkl
 
 ## Project layout
 
-- `src/` – the React app. `src/lib/wordStore.js` (saved words) and `src/lib/historyStore.js` (past explanations) are the only files that touch localStorage.
+- `src/` – the React app. `src/lib/wordStore.js` (saved words) and `src/lib/historyStore.js` (past explanations) are the only files that touch localStorage. `shared/topics.js` holds the topic list used by both the app and the server.
 - `api/explain.js` – thin Vercel adapter. `api/_lib/handleExplain.js` holds the request logic; `api/_lib/aiProvider.js` is the only file that knows about Groq.
 
 ## Ideas for version 2
 
-Login and accounts, a difficulty selector and follow-up questions, more practice modes (multiple choice first), categories and word statistics, other languages.
+Login and accounts, follow-up questions, more practice modes, your own labels on words, practising one topic at a time, other languages.

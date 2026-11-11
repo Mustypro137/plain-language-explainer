@@ -108,3 +108,75 @@ test('Export downloads the saved words', async () => {
   await user.click(screen.getByRole('button', { name: /Export/ }))
   expect(click).toHaveBeenCalledTimes(1)
 })
+
+function seedTopic(word, topic, box = 1) {
+  const { word: saved } = saveWord({ word, meaning: `${word} means`, sentence: `${word} in a sentence`, topic })
+  setBox(saved.id, box)
+}
+
+const topicButton = (name) => within(screen.getByRole('group', { name: 'Filter by topic' })).getByRole('button', { name })
+
+test('shows how many words are at each learning level', () => {
+  seed('a', 1)
+  seed('b', 1)
+  seed('c', 2)
+  seed('d', 3)
+  setup()
+  const stats = screen.getByRole('region', { name: 'Your progress' })
+  expect(within(stats).getByText('2', { selector: 'strong' }).parentElement).toHaveTextContent('2 new')
+  expect(within(stats).getByText(/learning$/)).toHaveTextContent('1 learning')
+  expect(within(stats).getByText(/known$/)).toHaveTextContent('1 known')
+})
+
+test('each word card shows its topic', () => {
+  seedTopic('useState', 'React')
+  setup()
+  const item = screen.getByText('useState').closest('li')
+  expect(within(item).getByText('React')).toBeInTheDocument()
+})
+
+test('topic buttons show only the topics in use, with counts, most used first', () => {
+  seedTopic('useState', 'React')
+  seedTopic('props', 'React')
+  seedTopic('commit', 'Git')
+  setup()
+  const names = within(screen.getByRole('group', { name: 'Filter by topic' }))
+    .getAllByRole('button')
+    .map((b) => b.textContent)
+  expect(names).toEqual(['All 3', 'React 2', 'Git 1'])
+  expect(topicButton('All 3')).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('a topic button filters the list, and All shows everything again', async () => {
+  seedTopic('useState', 'React')
+  seedTopic('commit', 'Git')
+  const user = setup()
+  await user.click(topicButton('Git 1'))
+  expect(topicButton('Git 1')).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByText('commit')).toBeInTheDocument()
+  expect(screen.queryByText('useState')).not.toBeInTheDocument()
+  await user.click(topicButton('All 2'))
+  expect(screen.getByText('useState')).toBeInTheDocument()
+})
+
+test('topic and search work together', async () => {
+  seedTopic('useState', 'React')
+  seedTopic('useEffect', 'React')
+  seedTopic('useless', 'Git')
+  const user = setup()
+  await user.click(topicButton('React 2'))
+  await user.type(screen.getByLabelText('Search your words'), 'effect')
+  expect(screen.getByText('useEffect')).toBeInTheDocument()
+  expect(screen.queryByText('useState')).not.toBeInTheDocument()
+  expect(screen.queryByText('useless')).not.toBeInTheDocument()
+})
+
+test('deleting the last word of a topic goes back to All', async () => {
+  seedTopic('useState', 'React')
+  seedTopic('commit', 'Git')
+  const user = setup()
+  await user.click(topicButton('Git 1'))
+  await user.click(screen.getByRole('button', { name: 'Delete commit' }))
+  expect(topicButton('All 1')).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByText('useState')).toBeInTheDocument()
+})

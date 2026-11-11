@@ -5,14 +5,34 @@ import LevelDots from '../components/LevelDots.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { downloadWords } from '../lib/exportWords.js'
 import { deleteWord, listWords } from '../lib/wordStore.js'
+import { TOPICS } from '../../shared/topics.js'
+
+const LEVELS = [
+  [1, 'new'],
+  [2, 'learning'],
+  [3, 'known'],
+]
+
+// Topics in use, most words first; ties keep the fixed topic order.
+function topicCounts(words) {
+  const counts = new Map()
+  for (const w of words) counts.set(w.topic, (counts.get(w.topic) ?? 0) + 1)
+  return [...counts].sort((a, b) => b[1] - a[1] || TOPICS.indexOf(a[0]) - TOPICS.indexOf(b[0]))
+}
 
 export default function WordsPage() {
   const toast = useToast()
   const [words, setWords] = useState(listWords)
   const [query, setQuery] = useState('')
+  const [topic, setTopic] = useState('All')
 
+  const counts = topicCounts(words)
+  // If the chosen topic has no words left (after a delete), show them all.
+  const activeTopic = counts.some(([t]) => t === topic) ? topic : 'All'
   const needle = query.trim().toLowerCase()
-  const shown = words.filter((w) => w.word.toLowerCase().includes(needle))
+  const shown = words.filter(
+    (w) => (activeTopic === 'All' || w.topic === activeTopic) && w.word.toLowerCase().includes(needle),
+  )
 
   function remove(id) {
     deleteWord(id)
@@ -57,6 +77,30 @@ export default function WordsPage() {
         />
       ) : (
         <>
+          <section className="stats" aria-label="Your progress">
+            <ul className="stat-list">
+              {LEVELS.map(([box, label]) => (
+                <li key={box} className="stat">
+                  <strong>{words.filter((w) => w.box === box).length}</strong> {label}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <div className="topic-filter" role="group" aria-label="Filter by topic">
+            {[['All', words.length], ...counts].map(([t, n]) => (
+              <button
+                key={t}
+                type="button"
+                className="btn topic-btn"
+                aria-pressed={activeTopic === t}
+                onClick={() => setTopic(t)}
+              >
+                {t} <span className="topic-count">{n}</span>
+              </button>
+            ))}
+          </div>
+
           <div className="stack-xs">
             <label htmlFor="search" className="field-label">
               Search your words
@@ -83,6 +127,7 @@ export default function WordsPage() {
                     <p className="word-source">{w.sentence}</p>
                   </div>
                   <div className="word-card-side">
+                    <span className="topic-tag">{w.topic}</span>
                     <LevelDots box={w.box} />
                     <button
                       type="button"
