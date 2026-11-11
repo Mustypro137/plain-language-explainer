@@ -9,7 +9,7 @@ export default function EmptyState({ title, text, linkTo, linkLabel }) {
         <rect x="42" y="62" width="76" height="8" rx="4" fill="var(--line)" />
         <rect x="42" y="78" width="48" height="8" rx="4" fill="var(--line)" />
         <circle cx="128" cy="26" r="12" fill="var(--violet)" stroke="var(--ink)" strokeWidth="2" />
-        <path d="M122 26h12M128 20v12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M122 26h12M128 20v12" stroke="var(--on-strong)" strokeWidth="2.5" strokeLinecap="round" />
       </svg>
       <h2>{title}</h2>
       <p className="soft">{text}</p>

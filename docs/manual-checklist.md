@@ -41,6 +41,7 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.
+- [ ] Dark mode: with the device set to dark and nothing chosen, the app opens dark with no white flash. The sun/moon button switches theme, the choice survives a reload, and every page passes the contrast check in both themes.
 - [ ] Every text and button colour pair passes WCAG AA (use the browser's contrast tool).
 - [ ] Every control shows the focus ring and works with the keyboard.
 - [ ] No horizontal scroll at 360px wide.

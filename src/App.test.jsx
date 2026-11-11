@@ -29,3 +29,8 @@ test.each([
   renderAt(path)
   expect(screen.getByRole('heading', { level: 1, name })).toBeInTheDocument()
 })
+
+test('the top bar has the light/dark switch', () => {
+  renderAt('/')
+  expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: /^Switch to (dark|light) mode$/ }))
+})

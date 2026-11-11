@@ -10,11 +10,40 @@
   --line: #e7e2d6;
   --alert: #b42318;
 
+  /* Roles that differ between light and dark */
+  --outline: var(--ink); /* card and button outlines */
+  --shadow-ink: var(--ink); /* the hard offset shadows */
+  --link: var(--teal); /* links and the focus ring */
+  --on-bright: #1f2430; /* text on sunshine and coral: always dark */
+  --on-strong: #ffffff; /* text on teal and violet: always white */
+  --code-bg: #1f2430;
+  --code-text: #faf7f0;
+
   --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
   --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --radius: 8px;
-  --border: 2px solid var(--ink);
-  --shadow: 4px 4px 0 var(--ink);
+  --border: 2px solid var(--outline);
+  --shadow: 4px 4px 0 var(--shadow-ink);
+
+  color-scheme: light;
+}
+
+/* Dark: marker on a dark notebook. Accent colours stay the same. */
+:root[data-theme='dark'] {
+  --paper: #14171e;
+  --card: #1e222b;
+  --ink: #f1ece0;
+  --soft-ink: #aab1be;
+  --line: #343a47;
+  --alert: #ff9387;
+
+  --outline: #9aa3b4;
+  --shadow-ink: #000000;
+  --link: #5fd0c2;
+  --code-bg: #0c0e13;
+  --code-text: #f1ece0;
+
+  color-scheme: dark;
 }
