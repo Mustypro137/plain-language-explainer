@@ -41,7 +41,7 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 ## Version 2 checks
 
 - [ ] Practice: Multiple choice is off with a hint below 4 saved words. With 4 or more, each question shows four meanings; the right pick says Correct, a wrong pick marks both, keys 1 to 4 and Enter work, and a round ends on the results screen.
-- [ ] Explain: after an answer, "Make it simpler" and "More detail" each return a new answer with "Simpler version" or "More detailed version", and the Network tab shows  in the request.
+- [ ] Explain: after an answer, "Make it simpler" and "More detail" each return a new answer with "Simpler version" or "More detailed version", and the Network tab shows `level` in the request.
 - [ ] My Words: new saved words show a topic; words saved before topics show General. The new / learning / known numbers match the cards, and topic buttons filter the list together with search.
 
 ## Polish checks (from Task 7)
