@@ -29,6 +29,15 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 4. MDN, Promise: "The Promise object represents the eventual completion (or failure) of an asynchronous operation and its resulting value."
 5. MDN, CORS: "Cross-Origin Resource Sharing (CORS) is an HTTP-header based mechanism that allows a server to indicate any origins other than its own from which a browser should permit loading resources."
 
+## History checks
+
+- [ ] Explain two texts, then open History: both are there, newest first, with an Error or Docs label and the date.
+- [ ] Open shows the old explanation on the Explain page with "From your history", and the Network tab shows no new `/api/explain` request.
+- [ ] Closing and reopening the browser keeps History.
+- [ ] Delete removes one entry. Clear all asks first; Cancel keeps everything, OK empties the list.
+- [ ] Opening `/history` directly in the address bar works.
+- [ ] The four top-bar links fit on one line at 320px and 360px wide.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.
