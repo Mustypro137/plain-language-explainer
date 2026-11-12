@@ -83,7 +83,18 @@ test('Delete removes the word from the page and from storage', async () => {
   expect(screen.queryByText('callback')).not.toBeInTheDocument()
   expect(screen.getByText('promise')).toBeInTheDocument()
   expect(listWords().map((w) => w.word)).toEqual(['promise'])
-  expect(screen.getByRole('status')).toHaveTextContent('Deleted')
+  expect(screen.getByRole('status')).toHaveTextContent('Deleted “callback”')
+})
+
+test('Undo after Delete brings the word back with its level', async () => {
+  seed('callback', 3)
+  seed('promise')
+  const user = setup()
+  await user.click(screen.getByRole('button', { name: 'Delete callback' }))
+  await user.click(screen.getByRole('button', { name: 'Undo' }))
+  expect(listWords().map((w) => [w.word, w.box])).toEqual([['promise', 1], ['callback', 3]])
+  expect(screen.getByText('callback')).toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent('“callback” is back')
 })
 
 test('Export and Practise are hidden when the list is empty', () => {

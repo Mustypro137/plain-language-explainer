@@ -30,6 +30,31 @@ test.each([
   expect(screen.getByRole('heading', { level: 1, name })).toBeInTheDocument()
 })
 
+test.each([
+  ['/', 'Plain-Language Explainer'],
+  ['/words', 'My Words · Plain-Language Explainer'],
+  ['/practice', 'Practice · Plain-Language Explainer'],
+  ['/history', 'History · Plain-Language Explainer'],
+  ['/no-such-page', 'Page not found · Plain-Language Explainer'],
+])('route %s names itself in the browser tab', (path, title) => {
+  renderAt(path)
+  expect(document.title).toBe(title)
+})
+
+test('an unknown address shows Page not found with a way back', () => {
+  renderAt('/no-such-page')
+  expect(screen.getByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Go to Explain' })).toHaveAttribute('href', '/')
+})
+
+test('the app name in the top bar links to the Explain page', () => {
+  renderAt('/words')
+  expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Plain-Language Explainer' })).toHaveAttribute(
+    'href',
+    '/',
+  )
+})
+
 test('the top bar has the light/dark switch', () => {
   renderAt('/')
   expect(screen.getByRole('banner')).toContainElement(screen.getByRole('button', { name: /^Switch to (dark|light) mode$/ }))

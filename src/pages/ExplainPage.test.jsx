@@ -1,10 +1,11 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { ToastProvider } from '../components/Toast.jsx'
 import { explainText } from '../lib/explainText.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
 import { addHistory, listHistory } from '../lib/historyStore.js'
+import { SAMPLES } from '../lib/samples.js'
 import { hasWord, listWords, saveWord } from '../lib/wordStore.js'
 import ExplainPage from './ExplainPage.jsx'
 
@@ -341,6 +342,190 @@ test('an entry opened from History can be explained differently', async () => {
   expect(explainText).toHaveBeenLastCalledWith('old pasted text', 'simpler')
   expect(screen.queryByText(/From your history/)).not.toBeInTheDocument()
   expect(detail()).toBeEnabled()
+})
+
+describe('before the first answer', () => {
+  test('the answer column shows what the five parts will be', () => {
+    setup()
+    const column = screen.getByRole('region', { name: 'What you will get' })
+    for (const part of ['In simple words', 'Why this happens', 'What to try next', 'Practical example', 'Hard words']) {
+      expect(within(column).getByText(part)).toBeInTheDocument()
+    }
+  })
+
+  test('the preview goes away when an answer is on its way', async () => {
+    explainText.mockReturnValue(new Promise(() => {}))
+    const user = setup()
+    await submit(user)
+    expect(screen.queryByRole('region', { name: 'What you will get' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Explanation' })).toBeInTheDocument()
+  })
+})
+
+describe('the keyboard shortcut', () => {
+  test.each([['{Control>}{Enter}{/Control}'], ['{Meta>}{Enter}{/Meta}']])('%s in the text box explains', async (keys) => {
+    explainText.mockResolvedValue({ ok: true, data: docsData })
+    const user = setup()
+    await user.type(screen.getByLabelText('Your text'), 'some text')
+    await user.keyboard(keys)
+    expect(explainText).toHaveBeenCalledWith('some text')
+  })
+
+  test('Enter alone adds a new line', async () => {
+    const user = setup()
+    await user.type(screen.getByLabelText('Your text'), 'one{Enter}two')
+    expect(screen.getByLabelText('Your text')).toHaveValue('one\ntwo')
+    expect(explainText).not.toHaveBeenCalled()
+  })
+
+  test('does nothing while the box is empty', async () => {
+    const user = setup()
+    await user.click(screen.getByLabelText('Your text'))
+    await user.keyboard('{Control>}{Enter}{/Control}')
+    expect(explainText).not.toHaveBeenCalled()
+  })
+})
+
+describe('the examples', () => {
+  const sample = SAMPLES[0]
+  const example = () => screen.getByRole('button', { name: sample.label })
+
+  test('there is a button for each example', () => {
+    setup()
+    const group = screen.getByRole('group', { name: 'Nothing to paste? Try an example:' })
+    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(SAMPLES.map((s) => s.label))
+  })
+
+  test('an example fills the box and shows its answer without asking the AI', async () => {
+    const user = setup()
+    await user.click(example())
+    expect(screen.getByLabelText('Your text')).toHaveValue(sample.text)
+    expect(screen.getByText(sample.result.explanation)).toBeInTheDocument()
+    expect(screen.getByText(/^Example answer, written in advance/)).toBeInTheDocument()
+    expect(explainText).not.toHaveBeenCalled()
+  })
+
+  test('an example is not kept in History', async () => {
+    const user = setup()
+    await user.click(example())
+    expect(listHistory()).toEqual([])
+  })
+
+  test('words from an example can be saved', async () => {
+    const user = setup()
+    await user.click(example())
+    await user.click(screen.getByRole('button', { name: 'Save undefined' }))
+    expect(hasWord('undefined')).toBe(true)
+  })
+
+  test('Explain after an example asks the AI for real, and the example note goes', async () => {
+    explainText.mockResolvedValue({ ok: true, data: { ...errorData, explanation: 'From the AI.' } })
+    const user = setup()
+    await user.click(example())
+    await user.click(explainButton())
+    expect(await screen.findByText('From the AI.')).toBeInTheDocument()
+    expect(explainText).toHaveBeenCalledWith(sample.text)
+    expect(screen.queryByText(/^Example answer/)).not.toBeInTheDocument()
+  })
+
+  test('an example replaces an entry opened from History', async () => {
+    const item = addHistory({ text: 'old pasted text', result: errorData })
+    const user = setup(`/?item=${item.id}`)
+    await user.click(example())
+    expect(screen.queryByText(/From your history/)).not.toBeInTheDocument()
+    expect(screen.getByTestId('address')).toHaveTextContent(/^\/$/)
+  })
+
+  test('the examples are off while an answer is loading', async () => {
+    explainText.mockReturnValue(new Promise(() => {}))
+    const user = setup()
+    await submit(user)
+    expect(example()).toBeDisabled()
+  })
+})
+
+describe('bringing the answer into view', () => {
+  let scroll
+  beforeEach(() => {
+    scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+  })
+  afterEach(() => {
+    delete Element.prototype.scrollIntoView
+    delete window.matchMedia
+  })
+
+  // jsdom has no layout, so say where the answer column is on the screen.
+  const columnAt = (top) => vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ top })
+
+  test('scrolls the answer column up when it starts below the screen', async () => {
+    columnAt(2000)
+    explainText.mockReturnValue(new Promise(() => {}))
+    const user = setup()
+    await submit(user)
+    expect(scroll).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' })
+    expect(scroll.mock.contexts[0]).toBe(screen.getByRole('region', { name: 'Explanation' }))
+  })
+
+  test('does not scroll when the answer column is already in view', async () => {
+    columnAt(150)
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user)
+    await screen.findByText(errorData.explanation)
+    expect(scroll).not.toHaveBeenCalled()
+  })
+
+  test('scrolls back up to a new answer when the user had read past the top', async () => {
+    columnAt(-900)
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user)
+    await screen.findByText(errorData.explanation)
+    expect(scroll).toHaveBeenCalled()
+  })
+
+  test('jumps without the smooth scroll when the user asks for less motion', async () => {
+    columnAt(2000)
+    window.matchMedia = (q) => ({ matches: q === '(prefers-reduced-motion: reduce)' })
+    explainText.mockReturnValue(new Promise(() => {}))
+    const user = setup()
+    await submit(user)
+    expect(scroll).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' })
+  })
+
+  test('moves focus to the Explanation heading when the answer arrives', async () => {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user)
+    await screen.findByText(errorData.explanation)
+    expect(screen.getByRole('heading', { level: 2, name: 'Explanation' })).toHaveFocus()
+  })
+
+  test('moves focus to the heading after an error too', async () => {
+    explainText.mockResolvedValue({ ok: false, error: 'ai_failed' })
+    const user = setup()
+    await submit(user)
+    await screen.findByRole('alert')
+    expect(screen.getByRole('heading', { level: 2, name: 'Explanation' })).toHaveFocus()
+  })
+
+  test('focus is not lost after Make it simpler', async () => {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user)
+    await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
+    await screen.findByText('Simpler version')
+    expect(screen.getByRole('heading', { level: 2, name: 'Explanation' })).toHaveFocus()
+  })
+
+  test('opening a History entry does not move focus or scroll', () => {
+    columnAt(2000)
+    const item = addHistory({ text: 'old pasted text', result: errorData })
+    setup(`/?item=${item.id}`)
+    expect(screen.getByRole('heading', { level: 2, name: 'Explanation' })).not.toHaveFocus()
+    expect(scroll).not.toHaveBeenCalled()
+  })
 })
 
 describe('when the free AI limit is used up', () => {

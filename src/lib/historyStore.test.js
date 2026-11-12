@@ -5,6 +5,7 @@ import {
   deleteHistoryItem,
   getHistoryItem,
   listHistory,
+  restoreHistory,
 } from './historyStore.js'
 
 const KEY = 'ple.history.v1'
@@ -83,6 +84,48 @@ test('clearHistory removes every entry', () => {
   addHistory({ text: 'b', result: result() })
   clearHistory()
   expect(listHistory()).toEqual([])
+})
+
+const at = (text, savedAt) => stored({ id: text, text, savedAt })
+const put = (items) => localStorage.setItem(KEY, JSON.stringify(items))
+const texts = () => listHistory().map((h) => h.text)
+
+test('deleteHistoryItem returns the removed entry, and restoreHistory puts it back in date order', () => {
+  put([at('c', '2026-01-03T00:00:00Z'), at('b', '2026-01-02T00:00:00Z'), at('a', '2026-01-01T00:00:00Z')])
+  const removed = deleteHistoryItem('b')
+  expect(removed.map((h) => h.id)).toEqual(['b'])
+  expect(texts()).toEqual(['c', 'a'])
+  expect(restoreHistory(removed)).toBe(true)
+  expect(texts()).toEqual(['c', 'b', 'a'])
+})
+
+test('deleteHistoryItem returns nothing for an unknown id', () => {
+  put([at('a', '2026-01-01T00:00:00Z')])
+  expect(deleteHistoryItem('nope')).toEqual([])
+})
+
+test('clearHistory returns every entry, and restoreHistory brings them all back', () => {
+  put([at('b', '2026-01-02T00:00:00Z'), at('a', '2026-01-01T00:00:00Z')])
+  const removed = clearHistory()
+  expect(listHistory()).toEqual([])
+  restoreHistory(removed)
+  expect(texts()).toEqual(['b', 'a'])
+})
+
+test('restoreHistory keeps entries added since, and the newer copy of the same text', () => {
+  put([at('a', '2026-01-01T00:00:00Z')])
+  const removed = clearHistory()
+  put([at('new', '2026-01-05T00:00:00Z'), stored({ id: 'a2', text: 'a', savedAt: '2026-01-04T00:00:00Z' })])
+  restoreHistory(removed)
+  expect(listHistory().map((h) => h.id)).toEqual(['new', 'a2'])
+})
+
+test('restoreHistory still keeps only the newest entries', () => {
+  const removed = Array.from({ length: MAX_ITEMS }, (_, i) => at(`old${i}`, `2026-01-01T00:00:${String(i).padStart(2, '0')}Z`))
+  put([at('new', '2026-02-01T00:00:00Z')])
+  restoreHistory(removed)
+  expect(listHistory()).toHaveLength(MAX_ITEMS)
+  expect(texts()[0]).toBe('new')
 })
 
 test('returns an empty list when storage holds broken JSON', () => {

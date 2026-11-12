@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import ExplainPreview from '../components/ExplainPreview.jsx'
 import ResultCard from '../components/ResultCard.jsx'
 import Skeleton from '../components/Skeleton.jsx'
 import { useToast } from '../components/Toast.jsx'
@@ -8,6 +9,8 @@ import { formatDate } from '../lib/formatDate.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
 import { formatWait } from '../lib/formatWait.js'
 import { addHistory, getHistoryItem } from '../lib/historyStore.js'
+import { SAMPLES } from '../lib/samples.js'
+import { usePageTitle } from '../lib/usePageTitle.js'
 import { hasWord, saveWord } from '../lib/wordStore.js'
 
 const MAX_CHARS = 3000
@@ -33,7 +36,21 @@ const wordKey = (word) => word.trim().toLowerCase()
 
 const savedKeys = (words) => new Set(words.filter((w) => hasWord(w.word)).map((w) => wordKey(w.word)))
 
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+// On a phone the answer column sits below the paste box, often off screen.
+// Bring it up when it changes, unless its top is already in the upper part of the screen.
+function reveal(el) {
+  if (!el?.scrollIntoView) return
+  const { top } = el.getBoundingClientRect()
+  if (top >= 0 && top < window.innerHeight * 0.6) return
+  el.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' })
+}
+
 export default function ExplainPage() {
+  usePageTitle(null)
   const toast = useToast()
   const [params, setParams] = useSearchParams()
   // An entry opened from the History page: shown as it was saved, with no AI call.
@@ -48,6 +65,12 @@ export default function ExplainPage() {
   // Set when the free AI limit is used up: { until (ms), total (seconds), limit }.
   const [wait, setWait] = useState(null)
   const [now, setNow] = useState(() => Date.now())
+  // True while the answer on screen is a sample written in advance, not from the AI.
+  const [isSample, setIsSample] = useState(false)
+  const sectionRef = useRef(null)
+  const headingRef = useRef(null)
+  // Only move the screen and focus after the user asks for something, not on page load.
+  const userAsked = useRef(false)
 
   const remaining = wait ? Math.max(0, Math.ceil((wait.until - now) / 1000)) : 0
   const waiting = remaining > 0
@@ -61,20 +84,56 @@ export default function ExplainPage() {
     return () => clearInterval(timer)
   }, [waiting])
 
+  // Show the skeleton when loading starts. When the answer or error arrives, move focus
+  // to the Explanation heading: screen readers then read from there, and the buttons
+  // under the old answer (now gone) do not leave focus lost.
+  useEffect(() => {
+    if (!userAsked.current) return
+    reveal(sectionRef.current)
+    if (status !== 'loading') headingRef.current?.focus({ preventScroll: true })
+  }, [status, result])
+
   function explain() {
     if (!canExplain) return
     run({ text: text.trim(), level: null })
   }
 
+  function onPasteKeyDown(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault()
+      explain()
+    }
+  }
+
+  function leaveHistoryEntry() {
+    setOpened(null)
+    if (params.has('item')) setParams({}, { replace: true })
+  }
+
+  function showSample(sample) {
+    if (loading) return
+    userAsked.current = true
+    leaveHistoryEntry()
+    setText(sample.text)
+    setRequest({ text: sample.text, level: null })
+    setResult(sample.result)
+    setSaved(savedKeys(sample.result.words))
+    setError(null)
+    setWait(null)
+    setIsSample(true)
+    setStatus('done')
+  }
+
   async function run(req) {
     if (loading || waiting) return
+    userAsked.current = true
     setRequest(req)
     setStatus('loading')
     setResult(null)
     setError(null)
     setWait(null)
-    setOpened(null)
-    if (params.has('item')) setParams({}, { replace: true })
+    setIsSample(false)
+    leaveHistoryEntry()
     const answer = await (req.level ? explainText(req.text, req.level) : explainText(req.text))
     if (answer.ok) {
       addHistory({ text: req.text, result: answer.data })
@@ -131,6 +190,7 @@ export default function ExplainPage() {
             rows={8}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={onPasteKeyDown}
           />
           <div className="paste-meta">
             <span>Do not paste passwords or secret keys. Explanations are kept in History in this browser.</span>
@@ -141,127 +201,157 @@ export default function ExplainPage() {
           {tooLong && <p className="count-over">Please shorten the text</p>}
         </div>
 
-        <button type="button" className="btn btn-primary" disabled={!canExplain} onClick={explain}>
-          Explain
-          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14" />
-            <path d="M13 6l6 6-6 6" />
-          </svg>
-        </button>
+        <div className="explain-actions">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!canExplain}
+            onClick={explain}
+            aria-keyshortcuts="Control+Enter Meta+Enter"
+          >
+            Explain
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14" />
+              <path d="M13 6l6 6-6 6" />
+            </svg>
+          </button>
+          <p className="soft key-hint" aria-hidden="true">
+            or press <kbd>{IS_MAC ? '⌘' : 'Ctrl'}</kbd> + <kbd>Enter</kbd>
+          </p>
+        </div>
+
+        <div className="samples" role="group" aria-labelledby="samples-label">
+          <span id="samples-label" className="samples-label">
+            Nothing to paste? Try an example:
+          </span>
+          <div className="samples-buttons">
+            {SAMPLES.map((s) => (
+              <button key={s.id} type="button" className="btn sample-btn" disabled={loading} onClick={() => showSample(s)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {status !== 'idle' && (
-        <section className="explain-right" aria-label="Explanation">
-          <div className="results-head">
-            <h2>Explanation</h2>
-            {result && (
-              <button type="button" className="btn btn-outline" onClick={copy}>
-                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="11" height="11" rx="2" />
-                  <path d="M5 15V6a2 2 0 0 1 2-2h9" />
-                </svg>
-                Copy explanation
+      <section ref={sectionRef} className="explain-right" aria-labelledby="answer-heading">
+        <div className="results-head">
+          <h2 id="answer-heading" ref={headingRef} tabIndex={-1}>
+            {status === 'idle' ? 'What you will get' : 'Explanation'}
+          </h2>
+          {result && (
+            <button type="button" className="btn btn-outline" onClick={copy}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="11" height="11" rx="2" />
+                <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+              </svg>
+              Copy explanation
+            </button>
+          )}
+        </div>
+
+        {opened && (
+          <p className="soft history-note">
+            From your history · <time dateTime={opened.savedAt}>{formatDate(opened.savedAt)}</time>
+          </p>
+        )}
+
+        {isSample && (
+          <p className="soft history-note">Example answer, written in advance. Press Explain to ask the AI yourself.</p>
+        )}
+
+        {result && request?.level && <p className="soft history-note">{LEVEL_NOTES[request.level]}</p>}
+
+        {status === 'idle' && <ExplainPreview />}
+
+        {error && (
+          <div className="error-box" role="alert">
+            {error === 'busy' && wait ? (
+              <div className="wait-text">
+                <span>{LIMIT_TITLES[wait.limit ?? 'unknown']}</span>
+                {waiting ? (
+                  <>
+                    {/* Screen readers hear the wait once; the visible line counts down. */}
+                    <span className="visually-hidden">You can try again in {formatWait(wait.total)}.</span>
+                    <span aria-hidden="true">You can try again in {formatWait(remaining)}.</span>
+                  </>
+                ) : (
+                  <span>You can try again now.</span>
+                )}
+              </div>
+            ) : (
+              <span>{ERROR_MESSAGES[error]}</span>
+            )}
+            {(error === 'offline' || (error === 'busy' && wait && !waiting)) && (
+              <button type="button" className="btn btn-outline" onClick={() => run(request)}>
+                Try again
               </button>
             )}
           </div>
+        )}
 
-          {opened && (
-            <p className="soft history-note">
-              From your history · <time dateTime={opened.savedAt}>{formatDate(opened.savedAt)}</time>
-            </p>
-          )}
+        {loading && <Skeleton />}
 
-          {result && request?.level && <p className="soft history-note">{LEVEL_NOTES[request.level]}</p>}
-
-          {error && (
-            <div className="error-box" role="alert">
-              {error === 'busy' && wait ? (
-                <div className="wait-text">
-                  <span>{LIMIT_TITLES[wait.limit ?? 'unknown']}</span>
-                  {waiting ? (
-                    <>
-                      {/* Screen readers hear the wait once; the visible line counts down. */}
-                      <span className="visually-hidden">You can try again in {formatWait(wait.total)}.</span>
-                      <span aria-hidden="true">You can try again in {formatWait(remaining)}.</span>
-                    </>
-                  ) : (
-                    <span>You can try again now.</span>
-                  )}
-                </div>
-              ) : (
-                <span>{ERROR_MESSAGES[error]}</span>
-              )}
-              {(error === 'offline' || (error === 'busy' && wait && !waiting)) && (
-                <button type="button" className="btn btn-outline" onClick={() => run(request)}>
-                  Try again
-                </button>
-              )}
+        {result && (
+          <>
+            <ResultCard tone="sunshine" title="In simple words" raised>
+              <p className="result-lead">{result.explanation}</p>
+            </ResultCard>
+            <ResultCard tone="coral" title="Why this happens">
+              <p>{result.why}</p>
+            </ResultCard>
+            {result.steps.length > 0 && (
+              <ResultCard tone="teal" title="What to try next">
+                <ol className="steps">
+                  {result.steps.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ol>
+              </ResultCard>
+            )}
+            {result.example && (
+              <ResultCard tone="violet" title="Practical example">
+                <pre className="code-block">{result.example}</pre>
+              </ResultCard>
+            )}
+            {result.words.length > 0 && (
+              <ResultCard tone="ink" title="Hard words">
+                <ul className="word-rows">
+                  {result.words.map((w) => {
+                    const isSaved = saved.has(wordKey(w.word))
+                    return (
+                      <li key={w.word} className="word-row">
+                        <div className="word-row-text">
+                          <span className={`word-name${isSaved ? ' word-name-saved' : ''}`}>{w.word}</span>
+                          <p>{w.meaning}</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          disabled={isSaved}
+                          aria-label={`${isSaved ? 'Saved' : 'Save'} ${w.word}`}
+                          onClick={() => save(w)}
+                        >
+                          {isSaved ? 'Saved' : 'Save'}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </ResultCard>
+            )}
+            <div className="explain-again">
+              <span className="explain-again-label">Not clear?</span>
+              <button type="button" className="btn btn-outline" onClick={() => run({ text: request.text, level: 'simpler' })}>
+                Make it simpler
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => run({ text: request.text, level: 'detail' })}>
+                More detail
+              </button>
             </div>
-          )}
-
-          {loading && <Skeleton />}
-
-          {result && (
-            <>
-              <ResultCard tone="sunshine" title="In simple words" raised>
-                <p className="result-lead">{result.explanation}</p>
-              </ResultCard>
-              <ResultCard tone="coral" title="Why this happens">
-                <p>{result.why}</p>
-              </ResultCard>
-              {result.steps.length > 0 && (
-                <ResultCard tone="teal" title="What to try next">
-                  <ol className="steps">
-                    {result.steps.map((s) => (
-                      <li key={s}>{s}</li>
-                    ))}
-                  </ol>
-                </ResultCard>
-              )}
-              {result.example && (
-                <ResultCard tone="violet" title="Practical example">
-                  <pre className="code-block">{result.example}</pre>
-                </ResultCard>
-              )}
-              {result.words.length > 0 && (
-                <ResultCard tone="ink" title="Hard words">
-                  <ul className="word-rows">
-                    {result.words.map((w) => {
-                      const isSaved = saved.has(wordKey(w.word))
-                      return (
-                        <li key={w.word} className="word-row">
-                          <div className="word-row-text">
-                            <span className={`word-name${isSaved ? ' word-name-saved' : ''}`}>{w.word}</span>
-                            <p>{w.meaning}</p>
-                          </div>
-                          <button
-                            type="button"
-                            className="btn btn-outline"
-                            disabled={isSaved}
-                            aria-label={`${isSaved ? 'Saved' : 'Save'} ${w.word}`}
-                            onClick={() => save(w)}
-                          >
-                            {isSaved ? 'Saved' : 'Save'}
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </ResultCard>
-              )}
-              <div className="explain-again">
-                <span className="explain-again-label">Not clear?</span>
-                <button type="button" className="btn btn-outline" onClick={() => run({ text: request.text, level: 'simpler' })}>
-                  Make it simpler
-                </button>
-                <button type="button" className="btn btn-outline" onClick={() => run({ text: request.text, level: 'detail' })}>
-                  More detail
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-      )}
+          </>
+        )}
+      </section>
     </main>
   )
 }

@@ -91,26 +91,37 @@ test('Delete removes only that explanation', async () => {
   await user.click(screen.getByRole('button', { name: 'Delete explanation of: TypeError: x is not a function' }))
   expect(screen.getAllByRole('listitem')).toHaveLength(1)
   expect(listHistory().map((h) => h.id)).toEqual(['new'])
-  expect(screen.getByRole('status')).toHaveTextContent('Deleted')
+  expect(screen.getByRole('status')).toHaveTextContent('Explanation deleted')
 })
 
-test('Clear all asks first, then removes everything', async () => {
+test('Undo after Delete brings the explanation back in its place', async () => {
   two()
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+  const user = setup()
+  await user.click(screen.getByRole('button', { name: 'Delete explanation of: useEffect is a React Hook.' }))
+  await user.click(screen.getByRole('button', { name: 'Undo' }))
+  expect(listHistory().map((h) => h.id)).toEqual(['new', 'old'])
+  expect(screen.getAllByRole('listitem')).toHaveLength(2)
+  expect(screen.getByRole('status')).toHaveTextContent('Brought back')
+})
+
+test('Clear all removes everything at once, with no dialog, and offers Undo', async () => {
+  two()
+  const confirm = vi.spyOn(window, 'confirm')
   const user = setup()
   await user.click(screen.getByRole('button', { name: 'Clear all' }))
-  expect(confirm).toHaveBeenCalledWith('Delete all explanations from this browser?')
+  expect(confirm).not.toHaveBeenCalled()
   expect(listHistory()).toEqual([])
   expect(screen.getByRole('heading', { level: 2, name: 'No explanations yet' })).toBeInTheDocument()
   expect(screen.getByRole('status')).toHaveTextContent('History cleared')
+  expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
 })
 
-test('Clear all keeps everything when the user cancels', async () => {
+test('Undo after Clear all brings every explanation back', async () => {
   two()
-  vi.spyOn(window, 'confirm').mockReturnValue(false)
   const user = setup()
   await user.click(screen.getByRole('button', { name: 'Clear all' }))
-  expect(listHistory()).toHaveLength(2)
+  await user.click(screen.getByRole('button', { name: 'Undo' }))
+  expect(listHistory().map((h) => h.id)).toEqual(['new', 'old'])
   expect(screen.getAllByRole('listitem')).toHaveLength(2)
 })
 

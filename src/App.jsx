@@ -3,6 +3,7 @@ import Header from './components/Header.jsx'
 import { ToastProvider } from './components/Toast.jsx'
 import ExplainPage from './pages/ExplainPage.jsx'
 import HistoryPage from './pages/HistoryPage.jsx'
+import NotFoundPage from './pages/NotFoundPage.jsx'
 import PracticePage from './pages/PracticePage.jsx'
 import WordsPage from './pages/WordsPage.jsx'
 
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/words" element={<WordsPage />} />
         <Route path="/practice" element={<PracticePage />} />
         <Route path="/history" element={<HistoryPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </ToastProvider>
   )
