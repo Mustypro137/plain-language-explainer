@@ -1,3 +1,4 @@
+import { segmentText } from '../../shared/segments.js'
 import { runAi } from './runAi.js'
 import { parseAiAnswer, validateLanguage, validateLevel, validateText } from './validate.js'
 
@@ -11,6 +12,6 @@ export async function handleExplain(body, askAi) {
 
   return runAi(
     () => askAi(checked.text, level.level, language.language),
-    (raw) => parseAiAnswer(raw, language.language),
+    (raw) => parseAiAnswer(raw, language.language, segmentText(checked.text).length),
   )
 }

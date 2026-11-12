@@ -253,13 +253,13 @@ test('explaining again leaves the History entry and clears it from the address',
   expect(explainText).toHaveBeenCalledWith('old pasted text', null, null)
 })
 
-const simpler = () => screen.getByRole('button', { name: 'Make it simpler' })
-const detail = () => screen.getByRole('button', { name: 'More detail' })
+const simpler = () => screen.getByRole('radio', { name: 'Simpler' })
+const detail = () => screen.getByRole('radio', { name: 'More detail' })
 
 test('no "explain differently" buttons before an answer', () => {
   setup()
-  expect(screen.queryByRole('button', { name: 'Make it simpler' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'More detail' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('radio', { name: 'Simpler' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('radio', { name: 'More detail' })).not.toBeInTheDocument()
 })
 
 test('Make it simpler asks again at the simpler level and says so', async () => {
@@ -268,8 +268,7 @@ test('Make it simpler asks again at the simpler level and says so', async () => 
     .mockResolvedValueOnce({ ok: true, data: { ...errorData, explanation: 'Even simpler words.' } })
   const user = setup()
   await submit(user)
-  expect(screen.getByText('Not clear?')).toBeInTheDocument()
-  await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
+  await user.click(await screen.findByRole('radio', { name: 'Simpler' }))
   expect(await screen.findByText('Even simpler words.')).toBeInTheDocument()
   expect(explainText).toHaveBeenLastCalledWith('some text', 'simpler', null)
   expect(screen.getByText('Simpler version')).toBeInTheDocument()
@@ -281,7 +280,7 @@ test('More detail asks again at the detail level and says so', async () => {
     .mockResolvedValueOnce({ ok: true, data: { ...errorData, explanation: 'A longer answer.' } })
   const user = setup()
   await submit(user)
-  await user.click(await screen.findByRole('button', { name: 'More detail' }))
+  await user.click(await screen.findByRole('radio', { name: 'More detail' }))
   expect(await screen.findByText('A longer answer.')).toBeInTheDocument()
   expect(explainText).toHaveBeenLastCalledWith('some text', 'detail', null)
   expect(screen.getByText('More detailed version')).toBeInTheDocument()
@@ -292,7 +291,7 @@ test('explaining differently uses the explained text, not later edits in the box
   const user = setup()
   await submit(user, 'first text')
   await user.type(screen.getByLabelText('Your text'), ' and more')
-  await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
+  await user.click(await screen.findByRole('radio', { name: 'Simpler' }))
   expect(explainText).toHaveBeenLastCalledWith('first text', 'simpler', null)
 })
 
@@ -300,10 +299,10 @@ test('a new Explain goes back to the normal level', async () => {
   explainText.mockResolvedValue({ ok: true, data: errorData })
   const user = setup()
   await submit(user)
-  await user.click(await screen.findByRole('button', { name: 'More detail' }))
+  await user.click(await screen.findByRole('radio', { name: 'More detail' }))
   await screen.findByText('More detailed version')
   await user.click(explainButton())
-  await screen.findByRole('button', { name: 'More detail' })
+  await screen.findByRole('radio', { name: 'More detail' })
   expect(explainText).toHaveBeenLastCalledWith('some text', null, null)
   expect(screen.queryByText('More detailed version')).not.toBeInTheDocument()
 })
@@ -315,7 +314,7 @@ test('Try again after going offline repeats the simpler request', async () => {
     .mockResolvedValueOnce({ ok: true, data: { ...errorData, explanation: 'Back online.' } })
   const user = setup()
   await submit(user)
-  await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
+  await user.click(await screen.findByRole('radio', { name: 'Simpler' }))
   await user.click(await screen.findByRole('button', { name: 'Try again' }))
   expect(await screen.findByText('Back online.')).toBeInTheDocument()
   expect(explainText).toHaveBeenLastCalledWith('some text', 'simpler', null)
@@ -328,7 +327,7 @@ test('the simpler version replaces the History entry for that text', async () =>
     .mockResolvedValueOnce({ ok: true, data: { ...errorData, explanation: 'Even simpler words.' } })
   const user = setup()
   await submit(user)
-  await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
+  await user.click(await screen.findByRole('radio', { name: 'Simpler' }))
   await screen.findByText('Even simpler words.')
   expect(listHistory().map((h) => h.result.explanation)).toEqual(['Even simpler words.'])
 })
@@ -419,7 +418,7 @@ describe('reusing History to save AI calls', () => {
     await screen.findByText(errorData.explanation)
     // The normal answer just replaced the simpler one in History, so this asks the AI.
     explainText.mockResolvedValue({ ok: true, data: { ...errorData, explanation: 'New simpler.' } })
-    await user.click(screen.getByRole('button', { name: 'Make it simpler' }))
+    await user.click(screen.getByRole('radio', { name: 'Simpler' }))
     expect(await screen.findByText('New simpler.')).toBeInTheDocument()
     expect(listHistory()[0].level).toBe('simpler')
   })
@@ -621,7 +620,7 @@ describe('bringing the answer into view', () => {
     explainText.mockResolvedValue({ ok: true, data: errorData })
     const user = setup()
     await submit(user)
-    await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
+    await user.click(await screen.findByRole('radio', { name: 'Simpler' }))
     await screen.findByText('Simpler version')
     expect(screen.getByRole('heading', { level: 2, name: 'Explanation' })).toHaveFocus()
   })
@@ -892,7 +891,7 @@ describe('ask about this', () => {
     await user.type(box(), 'Why?')
     await user.click(screen.getByRole('button', { name: 'Ask' }))
     await screen.findByText('First answer.')
-    await user.click(screen.getByRole('button', { name: 'Make it simpler' }))
+    await user.click(screen.getByRole('radio', { name: 'Simpler' }))
     await screen.findByText('Simpler version')
     expect(screen.queryByText('First answer.')).not.toBeInTheDocument()
     expect(screen.getByText('3 of 3 questions left for this text')).toBeInTheDocument()
@@ -935,5 +934,46 @@ describe('loading and error states', () => {
     await user.paste('a'.repeat(3040))
     expect(screen.getByText('Please shorten the text')).toBeInTheDocument()
     expect(screen.getByText(/Remove 40 characters\./)).toBeInTheDocument()
+  })
+})
+
+describe('line by line on the Explain page', () => {
+  const withLines = {
+    ...errorData,
+    lines: [
+      { from: 1, to: 1, plain: 'The first line, made plain.' },
+      { from: 2, to: 2, plain: 'The second line, made plain.' },
+    ],
+  }
+
+  test('an answer with lines shows the table, and the hard words are marked only there', async () => {
+    explainText.mockResolvedValue({ ok: true, data: withLines })
+    const user = setup()
+    await user.type(screen.getByLabelText('Your text'), 'x is undefined{Enter}reading a property')
+    await user.click(explainButton())
+    const table = await screen.findByRole('region', { name: 'Line by line' })
+    expect(within(table).getByText('The second line, made plain.')).toBeInTheDocument()
+    expect(within(table).getByRole('button', { name: 'undefined' })).toBeInTheDocument()
+    expect(screen.queryByText('Tap a marked word in your text to see what it means.')).not.toBeInTheDocument()
+  })
+
+  test('an answer without lines (from before) keeps the marked text in Hard words', async () => {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user, 'x is undefined')
+    await screen.findByText(errorData.explanation)
+    expect(screen.queryByRole('region', { name: 'Line by line' })).not.toBeInTheDocument()
+    expect(screen.getByText('Tap a marked word in your text to see what it means.')).toBeInTheDocument()
+  })
+
+  test('the reading level shows the level of the answer on screen and is off while loading', async () => {
+    explainText.mockResolvedValueOnce({ ok: true, data: withLines }).mockReturnValueOnce(new Promise(() => {}))
+    const user = setup()
+    await submit(user)
+    expect(await screen.findByRole('radio', { name: 'Normal' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'More detail' }))
+    expect(screen.getByRole('radio', { name: 'More detail' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Simpler' })).toBeDisabled()
+    expect(explainText).toHaveBeenLastCalledWith('some text', 'detail', null)
   })
 })

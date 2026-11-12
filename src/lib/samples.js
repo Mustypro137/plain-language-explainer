@@ -25,6 +25,10 @@ const [products, setProducts] = useState()
 const [products, setProducts] = useState([])
 
 return products.map((p) => <li key={p.id}>{p.name}</li>)`,
+      lines: [
+        { from: 1, to: 1, plain: 'JavaScript stopped because your code used .map() on a value that is undefined.' },
+        { from: 2, to: 3, plain: 'It happened in your ProductList component, in ProductList.jsx at line 14.' },
+      ],
       words: [
         {
           word: 'TypeError',
@@ -77,6 +81,14 @@ npm view some-chart-lib versions
 
 # Install the newest version
 npm install some-chart-lib@latest`,
+      lines: [
+        { from: 1, to: 1, plain: 'npm stopped with the error code ERESOLVE.' },
+        { from: 2, to: 2, plain: 'It could not find package versions that fit together.' },
+        { from: 3, to: 3, plain: 'This happened while adding some-chart-lib, version 2.1.0.' },
+        { from: 4, to: 4, plain: 'Your project has React 19.' },
+        { from: 5, to: 5, plain: 'One package that is needed does not fit:' },
+        { from: 6, to: 6, plain: 'some-chart-lib wants React 17, which you must install yourself.' },
+      ],
       words: [
         {
           word: 'dependency',
@@ -121,6 +133,13 @@ fetch('https://api.example.com/data')
 // The API must answer with this header,
 // or the browser blocks the answer:
 Access-Control-Allow-Origin: http://localhost:5173`,
+      lines: [
+        {
+          from: 1,
+          to: 1,
+          plain: 'CORS lets a server tell the browser which other websites may load its files.',
+        },
+      ],
       words: [
         {
           word: 'origin',

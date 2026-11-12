@@ -4,6 +4,8 @@ import CountdownRing from '../components/CountdownRing.jsx'
 import ExplainPreview from '../components/ExplainPreview.jsx'
 import FollowUp from '../components/FollowUp.jsx'
 import HelpLine from '../components/HelpLine.jsx'
+import LevelSlider from '../components/LevelSlider.jsx'
+import LineByLine from '../components/LineByLine.jsx'
 import ListenButton from '../components/ListenButton.jsx'
 import Loading from '../components/Loading.jsx'
 import MarkedText from '../components/MarkedText.jsx'
@@ -260,7 +262,7 @@ export default function ExplainPage() {
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(formatExplanation(result))
+      await navigator.clipboard.writeText(formatExplanation(result, request.text))
       toast('Copied')
     } catch {
       toast('Could not copy')
@@ -383,6 +385,14 @@ export default function ExplainPage() {
           )}
         </div>
 
+        {request && status !== 'idle' && (
+          <LevelSlider
+            value={request.level}
+            disabled={loading || waiting}
+            onChange={(level) => run({ text: request.text, level })}
+          />
+        )}
+
         {opened && (
           <div className="history-row">
             <p className="soft history-note">
@@ -443,6 +453,15 @@ export default function ExplainPage() {
               <p className="result-lead">{result.explanation}</p>
               <HelpLine help={result.help} field="explanation" />
             </ResultCard>
+            {result.lines?.length > 0 && (
+              <LineByLine
+                text={request.text}
+                lines={result.lines}
+                words={result.words}
+                isSaved={(w) => saved.has(wordKey(w.word))}
+                onSave={save}
+              />
+            )}
             <ResultCard title="Why this happens">
               <p>{result.why}</p>
               <HelpLine help={result.help} field="why" />
@@ -463,12 +482,15 @@ export default function ExplainPage() {
             )}
             {result.words.length > 0 && (
               <ResultCard title="Hard words">
-                <MarkedText
-                  text={request.text}
-                  words={result.words}
-                  isSaved={(w) => saved.has(wordKey(w.word))}
-                  onSave={save}
-                />
+                {/* With line by line, the words are already marked in the table above. */}
+                {!(result.lines?.length > 0) && (
+                  <MarkedText
+                    text={request.text}
+                    words={result.words}
+                    isSaved={(w) => saved.has(wordKey(w.word))}
+                    onSave={save}
+                  />
+                )}
                 <ul className="word-rows">
                   {result.words.map((w) => {
                     const isSaved = saved.has(wordKey(w.word))
@@ -497,15 +519,6 @@ export default function ExplainPage() {
                 </ul>
               </ResultCard>
             )}
-            <div className="explain-again">
-              <span className="explain-again-label">Not clear?</span>
-              <button type="button" className="btn btn-outline" onClick={() => run({ text: request.text, level: 'simpler' })}>
-                Make it simpler
-              </button>
-              <button type="button" className="btn btn-outline" onClick={() => run({ text: request.text, level: 'detail' })}>
-                More detail
-              </button>
-            </div>
             <FollowUp
               key={`${entryId ?? 'none'}-${request.text}-${request.level}`}
               items={followUps}

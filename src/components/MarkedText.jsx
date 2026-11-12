@@ -1,10 +1,10 @@
 import { useId, useState } from 'react'
 import { markWords } from '../lib/markWords.js'
-import HelpLine from './HelpLine.jsx'
-import ListenButton from './ListenButton.jsx'
+import WordPanel from './WordPanel.jsx'
 
 // The user's own text with the hard words marked. A tap on one shows its meaning right
-// below, where the confusion happened, with Listen and Save.
+// below, where the confusion happened, with Listen and Save. Used for answers without the
+// line-by-line view (kept from before it existed).
 export default function MarkedText({ text, words, isSaved, onSave }) {
   const [selected, setSelected] = useState(null)
   const panelId = useId()
@@ -35,25 +35,7 @@ export default function MarkedText({ text, words, isSaved, onSave }) {
         )}
       </div>
       <div id={panelId} className="word-panel-slot" aria-live="polite">
-        {current && (
-          <div className="word-panel">
-            <div className="word-panel-head">
-              <span className="word-name">{current.word}</span>
-              <ListenButton text={current.word} />
-            </div>
-            <p>{current.meaning}</p>
-            <HelpLine help={current.help} field="meaning" />
-            <button
-              type="button"
-              className="btn btn-outline"
-              disabled={isSaved(current)}
-              aria-label={`${isSaved(current) ? 'Saved' : 'Save'} ${current.word} to My Words`}
-              onClick={() => onSave(current)}
-            >
-              {isSaved(current) ? 'Saved' : 'Save to My Words'}
-            </button>
-          </div>
-        )}
+        {current && <WordPanel word={current} isSaved={isSaved} onSave={onSave} />}
       </div>
     </div>
   )

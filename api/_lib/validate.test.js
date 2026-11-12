@@ -22,10 +22,10 @@ const good = {
   words: [{ word: 'undefined', meaning: 'm', sentence: 's', topic: 'JavaScript' }],
 }
 
-test('reads a good answer', () => expect(parseAiAnswer(JSON.stringify(good))).toEqual(good))
+test('reads a good answer', () => expect(parseAiAnswer(JSON.stringify(good))).toEqual({ ...good, lines: [] }))
 
 test('reads an answer inside a Markdown code fence', () =>
-  expect(parseAiAnswer('```json\n' + JSON.stringify(good) + '\n```')).toEqual(good))
+  expect(parseAiAnswer('```json\n' + JSON.stringify(good) + '\n```')).toEqual({ ...good, lines: [] }))
 
 test('keeps at most 3 steps and 5 words', () => {
   const many = {

@@ -33,7 +33,7 @@ test('400 too_long for 3,001 characters, AI not called', async () => {
 test('200 with the parsed answer', async () => {
   const askAi = vi.fn().mockResolvedValue(JSON.stringify(good))
   const r = await handleExplain({ text: 'hi' }, askAi)
-  expect(r).toEqual({ status: 200, body: good })
+  expect(r).toEqual({ status: 200, body: { ...good, lines: [] } })
   expect(askAi).toHaveBeenCalledWith('hi', null, null)
 })
 

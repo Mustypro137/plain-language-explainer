@@ -1,11 +1,12 @@
 import { askAi, buildMessages, readRateLimit } from './aiProvider.js'
 
-test('sends the system prompt and the text, with no level note by default', () => {
-  const [system, user] = buildMessages('some text', null)
+test('sends the system prompt and the text in numbered parts, with no level note by default', () => {
+  const [system, user] = buildMessages('some text\nat App (App.jsx:3:1)', null)
   expect(system.role).toBe('system')
   expect(system.content).toMatch(/Reply with one JSON object/)
+  expect(system.content).toMatch(/"lines"/)
   expect(system.content).not.toMatch(/this version/i)
-  expect(user).toEqual({ role: 'user', content: 'some text' })
+  expect(user).toEqual({ role: 'user', content: '1| some text\n2| at App (App.jsx:3:1)' })
 })
 
 test('the simpler level asks for an even simpler version', () => {

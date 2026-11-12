@@ -18,6 +18,17 @@ const isHardWord = (w) =>
   isText(w.sentence) &&
   isOptionalHelp(w.help, ['meaning'])
 
+// "Line by line": parts "from" to "to" of the text, in plain English.
+const isLine = (l) =>
+  l !== null &&
+  typeof l === 'object' &&
+  Number.isInteger(l.from) &&
+  l.from >= 1 &&
+  Number.isInteger(l.to) &&
+  l.to >= l.from &&
+  isText(l.plain) &&
+  isOptionalHelp(l.help, ['plain'])
+
 function isResult(r) {
   return (
     r !== null &&
@@ -30,6 +41,8 @@ function isResult(r) {
     isText(r.example) &&
     Array.isArray(r.words) &&
     r.words.every(isHardWord) &&
+    // Answers saved before "line by line" have no lines; they show the five parts only.
+    (r.lines === undefined || (Array.isArray(r.lines) && r.lines.every(isLine))) &&
     isOptionalHelp(r.help, ['explanation', 'why'])
   )
 }
