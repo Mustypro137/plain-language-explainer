@@ -498,3 +498,45 @@ describe('confetti', () => {
     expect(confetti(container)).toBeNull()
   })
 })
+
+describe('focus mode and star progress', () => {
+  afterEach(() => {
+    delete document.body.dataset.focus
+  })
+
+  test('the top bar goes away during a round and comes back on the results', async () => {
+    two()
+    const { user } = setup()
+    expect(document.body.dataset.focus).toBe('practice')
+    expect(screen.getByRole('link', { name: 'Leave practice' })).toHaveAttribute('href', '/words')
+    for (let i = 0; i < 2; i++) {
+      await user.keyboard(' ')
+      await user.keyboard('2')
+    }
+    expect(screen.getByRole('heading', { level: 1, name: /You knew/ })).toBeInTheDocument()
+    expect(document.body.dataset.focus).toBeUndefined()
+  })
+
+  test('a star per card shows what was known and what comes back today', async () => {
+    two()
+    const { user, container } = setup()
+    const stars = () => [...container.querySelectorAll('.sp')].map((s) => s.className.replace('sp ', ''))
+    expect(stars()).toEqual(['sp-now', 'sp-next'])
+    await user.keyboard(' ')
+    await user.keyboard('1')
+    expect(stars()).toEqual(['sp-again sp-just', 'sp-now'])
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '0 known, 1 to review, 1 to go')
+  })
+
+  test.each([
+    ['2', '“alpha” is brighter now. Back tomorrow.'],
+    ['1', '“alpha” comes back today.'],
+  ])('after answering %s, a line says when the word comes back', async (key, line) => {
+    two()
+    const { user } = setup()
+    expect(screen.getByRole('button', { name: 'Show meaning of alpha' })).toBeInTheDocument()
+    await user.keyboard(' ')
+    await user.keyboard(key)
+    expect(screen.getByText(line)).toBeInTheDocument()
+  })
+})

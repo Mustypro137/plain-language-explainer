@@ -131,6 +131,16 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] Save a word on the Explain page: a small star flies to My Words in the top bar and the count goes up by one. With "reduce motion" on, there is no flight.
 - [ ] The top bar shows "★ N" beside My Words on a tablet or desktop; on a phone the links still fit on one line.
 
+## Design step 4 (quiz focus mode, History by day)
+
+- [ ] Start a practice round: the top bar goes away and an × button leads back to My Words. On the results screen the top bar is back.
+- [ ] Progress is a row of stars: the current card is indigo, a known word turns gold (and twinkles once), a forgotten one turns into a dashed circle. A screen reader hears "N known, N to review, N to go".
+- [ ] After each answer a line says "“word” is brighter now. Back tomorrow." or "“word” comes back today."
+- [ ] Flashcards, Multiple choice and Fill the blank all show the stars and the line.
+- [ ] History is grouped under Today, Yesterday and the date, newest first, with the time on each row.
+- [ ] An entry with a level, a language, questions or saved words lists them on one line (for example "Simpler · in Spanish · 1 question · 2 words saved").
+- [ ] Search History finds entries by their text or their explanation; with no match it says so.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.
