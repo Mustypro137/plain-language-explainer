@@ -16,6 +16,9 @@ import HelpLine from '../components/HelpLine.jsx'
 
 const noun = (n) => (n === 1 ? 'word' : 'words')
 
+// Confetti only for a good round: at least 4 of 5 words known.
+const GOOD_ROUND = 0.8
+
 // A word can be a "Fill the blank" question only if its saved sentence uses it.
 const canBlank = (w) => blankOut(w.sentence, w.word) !== null
 
@@ -177,11 +180,13 @@ function PracticeSession({ topic }) {
     const forgotten = answers.filter((a) => !a.knew).map((a) => a.word)
     return (
       <main className="page narrow-page">
-        <div className="confetti" aria-hidden="true">
-          {Array.from({ length: 10 }, (_, i) => (
-            <span key={i} className={`confetti-piece confetti-${i % 4}`} style={{ '--n': i }} />
-          ))}
-        </div>
+        {known >= answers.length * GOOD_ROUND && (
+          <div className="confetti" aria-hidden="true">
+            {Array.from({ length: 10 }, (_, i) => (
+              <span key={i} className={`confetti-piece confetti-${i % 4}`} style={{ '--n': i }} />
+            ))}
+          </div>
+        )}
         <section className="score-card" aria-label="Your result">
           <p className="score-kicker">{topic ? `${topic} round finished` : 'Round finished'}</p>
           <h1>

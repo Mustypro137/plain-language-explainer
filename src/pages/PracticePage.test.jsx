@@ -471,3 +471,30 @@ describe('focused practice', () => {
     expect(screen.getByText('My note: Like a phone call back.')).toBeInTheDocument()
   })
 })
+
+describe('confetti', () => {
+  const confetti = (container) => container.querySelector('.confetti')
+
+  async function finish(user, answers) {
+    for (const knew of answers) {
+      await user.keyboard(' ')
+      await user.keyboard(knew ? '2' : '1')
+    }
+  }
+
+  test('plays when every word was known', async () => {
+    two()
+    const { user, container } = setup()
+    await finish(user, [true, true])
+    expect(screen.getByRole('heading', { level: 1, name: 'You knew 2 of 2 words' })).toBeInTheDocument()
+    expect(confetti(container)).toBeInTheDocument()
+  })
+
+  test('does not play for a weak round', async () => {
+    two()
+    const { user, container } = setup()
+    await finish(user, [true, false])
+    expect(screen.getByRole('heading', { level: 1, name: 'You knew 1 of 2 words' })).toBeInTheDocument()
+    expect(confetti(container)).toBeNull()
+  })
+})

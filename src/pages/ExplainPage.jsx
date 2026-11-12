@@ -291,30 +291,6 @@ export default function ExplainPage() {
           {tooLong && <p className="count-over">Please shorten the text</p>}
         </div>
 
-        <div className="stack-xs">
-          <label htmlFor="language" className="field-label">
-            Help in my language
-          </label>
-          <select
-            id="language"
-            className="search-box language-select"
-            value={language ?? ''}
-            aria-describedby="language-hint"
-            onChange={(e) => chooseLanguage(e.target.value || null)}
-          >
-            <option value="">No, English only</option>
-            {LANGUAGES.map((l) => (
-              <option key={l.code} value={l.code}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-          <p id="language-hint" className="soft field-hint">
-            The explanation and the meanings of the hard words also come in your language, in smaller text under the
-            English.
-          </p>
-        </div>
-
         <div className="explain-actions">
           <button
             type="button"
@@ -345,6 +321,31 @@ export default function ExplainPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* A setting chosen once, so it sits below Explain and the examples: on a phone and on a
+            small laptop the Explain button stays on the first screen. */}
+        <div className="language-row">
+          <label htmlFor="language" className="field-label">
+            Help in my language
+          </label>
+          <select
+            id="language"
+            className="search-box language-select"
+            value={language ?? ''}
+            aria-describedby="language-hint"
+            onChange={(e) => chooseLanguage(e.target.value || null)}
+          >
+            <option value="">No, English only</option>
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+          <p id="language-hint" className="soft field-hint">
+            Adds a translation under the English.
+          </p>
         </div>
       </section>
 

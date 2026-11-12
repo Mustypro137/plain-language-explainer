@@ -24,6 +24,7 @@ No login, no database, no analytics. Saved words and History stay in your own br
 - Groq API on the Free plan, called with `fetch`
 - A Vercel Firewall rate-limit rule on `/api/`, so one visitor cannot use up the shared free AI limit (set up in the dashboard, see below)
 - Vitest and Testing Library
+- Security and cache headers in `vercel.json`: a Content-Security-Policy (only this site, Google Fonts, and the one inline script in `index.html`, allowed by its hash), and a one-year cache for the built files in `/assets/`. If you change that inline script, put its new hash in `vercel.json`; `shared/vercelConfig.test.js` fails until you do.
 
 ## The firewall rule for `/api/`
 
