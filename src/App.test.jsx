@@ -22,7 +22,7 @@ test('shows four navigation links', () => {
 })
 
 test.each([
-  ['/', 'Paste the text you do not understand'],
+  ['/', /^Paste what you don’t understand\. Read it line by line/],
   ['/words', 'My Words'],
   ['/practice', 'Practice'],
   ['/history', 'History'],

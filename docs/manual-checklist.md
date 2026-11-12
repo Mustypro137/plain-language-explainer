@@ -149,6 +149,13 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] "Practical example" is folded: "Show the example" opens it.
 - [ ] The React error from the samples above no longer gives "hooks" or "render" as hard words.
 
+## Home screen
+
+- [ ] The headline reads "Paste what you don’t understand. Read it line by line in plain English.", and the Explain button is on the first screen on a phone (including 375 x 667) and on a 1280 x 720 laptop.
+- [ ] The box and its bar are one panel. Pasting shows a first guess under it ("Looks like an npm error · 2 lines") with no request in the Network tab; the count turns red past 3,000.
+- [ ] Before the first answer, the right side shows a line made plain ("npm ERR! could not resolve" and its plain version) and three points. With saved words, a dark "N words in your sky" card links to My Words.
+- [ ] With a word that was practised and is due again, "Welcome back · N words are fading. Review them" appears above the headline and goes to Practice. With none fading, it does not show.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.
