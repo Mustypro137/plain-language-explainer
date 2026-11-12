@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ToastProvider } from '../components/Toast.jsx'
+import { addHistory } from '../lib/historyStore.js'
 import { listWords, saveWord, setProgress } from '../lib/wordStore.js'
 import WordsPage from './WordsPage.jsx'
 
@@ -283,5 +284,111 @@ describe('review days and the streak', () => {
     setup()
     expect(screen.getByRole('heading', { level: 2, name: '1-day streak' })).toBeInTheDocument()
     expect(screen.getByText('One round today makes it longer.')).toBeInTheDocument()
+  })
+})
+
+describe('word detail', () => {
+  const card = (word) => screen.getByText(word, { selector: '.word-title' }).closest('li')
+
+  test('Add a word saves a word typed by hand', async () => {
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Add a word' }))
+    const form = screen.getByRole('form', { name: 'Add a word' })
+    expect(within(form).getByLabelText('Word')).toHaveFocus()
+    await user.type(within(form).getByLabelText('Word'), 'closure')
+    await user.type(within(form).getByLabelText('Meaning'), 'A function that remembers.')
+    await user.selectOptions(within(form).getByLabelText('Topic'), 'JavaScript')
+    await user.type(within(form).getByLabelText(/My note/), 'Ask in class')
+    await user.click(within(form).getByRole('button', { name: 'Add to My Words' }))
+    expect(screen.queryByRole('form', { name: 'Add a word' })).not.toBeInTheDocument()
+    expect(listWords()[0]).toMatchObject({ word: 'closure', meaning: 'A function that remembers.', topic: 'JavaScript', note: 'Ask in class', sentence: '' })
+    expect(within(card('closure')).getByText('Ask in class')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add a word' })).toHaveFocus()
+    expect(await screen.findByText('Added “closure”')).toBeInTheDocument()
+  })
+
+  test('Add a word refuses a word that is already saved, and an empty meaning', async () => {
+    seed('callback')
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Add a word' }))
+    const form = screen.getByRole('form', { name: 'Add a word' })
+    await user.type(within(form).getByLabelText('Word'), 'Callback')
+    await user.click(within(form).getByRole('button', { name: 'Add to My Words' }))
+    expect(within(form).getByRole('alert')).toHaveTextContent('Please write what the word means.')
+    await user.type(within(form).getByLabelText('Meaning'), 'm')
+    await user.click(within(form).getByRole('button', { name: 'Add to My Words' }))
+    expect(within(form).getByRole('alert')).toHaveTextContent('“Callback” is already in My Words.')
+    expect(listWords()).toHaveLength(1)
+  })
+
+  test('Cancel and Escape close the form without saving', async () => {
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Add a word' }))
+    await user.type(screen.getByLabelText('Word'), 'x')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('form', { name: 'Add a word' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add a word' }))
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('form', { name: 'Add a word' })).not.toBeInTheDocument()
+    expect(listWords()).toHaveLength(0)
+  })
+
+  test('Edit changes the meaning, the note and the topic in place', async () => {
+    seed('callback', 2)
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Edit callback' }))
+    const form = screen.getByRole('form', { name: 'Edit “callback”' })
+    const meaning = within(form).getByLabelText('Meaning')
+    expect(meaning).toHaveFocus()
+    expect(meaning).toHaveValue('callback means')
+    await user.clear(meaning)
+    await user.type(meaning, 'A function called later.')
+    await user.type(within(form).getByLabelText(/My note/), 'Like a phone call back')
+    await user.selectOptions(within(form).getByLabelText('Topic'), 'React')
+    await user.click(within(form).getByRole('button', { name: 'Save changes' }))
+    const item = card('callback')
+    expect(within(item).getByText('A function called later.')).toBeInTheDocument()
+    expect(within(item).getByText('Like a phone call back')).toBeInTheDocument()
+    expect(within(item).getByText('React')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit callback' })).toHaveFocus()
+    expect(listWords()[0].box).toBe(2)
+  })
+
+  test('Cancel on Edit keeps the word as it was', async () => {
+    seed('callback')
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Edit callback' }))
+    await user.clear(screen.getByLabelText('Meaning'))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(within(card('callback')).getByText('callback means')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit callback' })).toHaveFocus()
+  })
+
+  test('links to the explanation it came from while History has it', () => {
+    const entry = addHistory({ text: 'pasted', result: { kind: 'docs', explanation: 'e', why: 'w', steps: [], example: '', words: [] } })
+    saveWord({ word: 'linked', meaning: 'm', sentence: 's', source: entry.id })
+    saveWord({ word: 'lost', meaning: 'm', sentence: 's', source: 'gone' })
+    setup()
+    expect(within(card('linked')).getByRole('link', { name: 'See the explanation it came from' })).toHaveAttribute(
+      'href',
+      `/?item=${entry.id}`,
+    )
+    expect(within(card('lost')).queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  test('shows the translated meaning under the English one', () => {
+    saveWord({ word: 'callback', meaning: 'm', sentence: 's', help: { lang: 'fr', meaning: 'Une fonction.' } })
+    setup()
+    expect(within(card('callback')).getByText('Une fonction.')).toHaveAttribute('lang', 'fr')
+  })
+
+  test('with a topic chosen, the practise link practises that topic', async () => {
+    saveWord({ word: 'hook', meaning: 'm', sentence: 's', topic: 'React' })
+    saveWord({ word: 'prop', meaning: 'm', sentence: 's', topic: 'React' })
+    saveWord({ word: 'promise', meaning: 'm', sentence: 's', topic: 'JavaScript' })
+    const user = setup()
+    expect(screen.getByRole('link', { name: 'Practise these words' })).toHaveAttribute('href', '/practice')
+    await user.click(screen.getByRole('button', { name: /^React/ }))
+    expect(screen.getByRole('link', { name: 'Practise React (2)' })).toHaveAttribute('href', '/practice?topic=React')
   })
 })

@@ -1,11 +1,22 @@
+import { findLanguage } from '../../shared/languages.js'
+import { isOptionalHelp } from './help.js'
+
 const KEY = 'ple.history.v1'
 
-export const MAX_ITEMS = 20
+export const MAX_ITEMS = 50
+
+// "Ask about this": questions kept with each explanation, to protect the shared AI limit.
+export const MAX_FOLLOW_UPS = 3
 
 const isText = (v) => typeof v === 'string'
 
 const isHardWord = (w) =>
-  w !== null && typeof w === 'object' && isText(w.word) && isText(w.meaning) && isText(w.sentence)
+  w !== null &&
+  typeof w === 'object' &&
+  isText(w.word) &&
+  isText(w.meaning) &&
+  isText(w.sentence) &&
+  isOptionalHelp(w.help, ['meaning'])
 
 function isResult(r) {
   return (
@@ -18,12 +29,19 @@ function isResult(r) {
     r.steps.every(isText) &&
     isText(r.example) &&
     Array.isArray(r.words) &&
-    r.words.every(isHardWord)
+    r.words.every(isHardWord) &&
+    isOptionalHelp(r.help, ['explanation', 'why'])
   )
 }
 
 // "simpler" or "detail" for "Not clear?" answers. Missing (entries saved before levels) means normal.
 const LEVELS = [undefined, null, 'simpler', 'detail']
+
+const isFollowUp = (f) =>
+  f !== null && typeof f === 'object' && isText(f.question) && isText(f.answer) && isOptionalHelp(f.help, ['answer'])
+
+// Missing language (entries saved before "Help in my language") means English only.
+const isLanguage = (code) => code === undefined || code === null || findLanguage(code) !== null
 
 function isItem(h) {
   return (
@@ -34,11 +52,15 @@ function isItem(h) {
     isText(h.savedAt) &&
     !Number.isNaN(Date.parse(h.savedAt)) &&
     LEVELS.includes(h.level) &&
+    isLanguage(h.language) &&
+    (h.followUps === undefined || (Array.isArray(h.followUps) && h.followUps.every(isFollowUp))) &&
     isResult(h.result)
   )
 }
 
 export const levelOf = (item) => item.level ?? null
+export const languageOf = (item) => item.language ?? null
+export const followUpsOf = (item) => item.followUps ?? []
 
 function read() {
   try {
@@ -66,21 +88,35 @@ export function getHistoryItem(id) {
   return read().find((h) => h.id === id)
 }
 
-// The kept answer for exactly this text at this level, so it can be shown without asking the AI.
-export function findHistory(text, level = null) {
-  return read().find((h) => h.text === text && levelOf(h) === level)
+// The kept answer for exactly this text, level and language, so it can be shown without asking the AI.
+export function findHistory(text, level = null, language = null) {
+  return read().find((h) => h.text === text && levelOf(h) === level && languageOf(h) === language)
 }
 
-export function addHistory({ text, result, level = null }) {
+// One entry per text. A text explained again keeps its id, so a saved word's link to
+// "the explanation it came from" still works.
+export function addHistory({ text, result, level = null, language = null }) {
+  const items = read()
   const item = {
-    id: crypto.randomUUID(),
+    id: items.find((h) => h.text === text)?.id ?? crypto.randomUUID(),
     text,
     level,
+    language,
     result,
     savedAt: new Date().toISOString(),
   }
-  const others = read().filter((h) => h.text !== text)
+  const others = items.filter((h) => h.text !== text)
   return write([item, ...others].slice(0, MAX_ITEMS)) ? item : null
+}
+
+// Adds a follow-up question and its answer to an entry. False if it is gone or full.
+export function addFollowUp(id, followUp) {
+  const items = read()
+  const item = items.find((h) => h.id === id)
+  if (!item || !isFollowUp(followUp) || followUpsOf(item).length >= MAX_FOLLOW_UPS) return false
+  const { question, answer, help } = followUp
+  item.followUps = [...followUpsOf(item), { question, answer, ...(help && { help }) }]
+  return write(items)
 }
 
 // Both return the removed entries, so restoreHistory can undo them; [] if nothing changed.

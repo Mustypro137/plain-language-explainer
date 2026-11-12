@@ -77,6 +77,20 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] After an answer, the hard words are marked in your own text. A tap shows the meaning with Listen and Save; a second tap closes it. A word the AI changed (for example "property" for "properties") is simply not marked.
 - [ ] Space on a focused speaker button on a flashcard plays the word, and does not flip the card.
 
+## Version 3, phase 3 checks
+
+- [ ] The firewall rule now says `Request Path` · `Starts with` · `/api/`, so it also covers `/api/ask`.
+- [ ] Choose a language under "Help in my language" and explain the five samples above: each answer has the translation under "In simple words", "Why this happens" and each hard word, in that language. The choice is still there after a reload.
+- [ ] Choose Arabic or Urdu: the translated lines read right to left, and the English stays left to right.
+- [ ] "No, English only" gives an answer with no translation lines, and the request in the Network tab has no `language`.
+- [ ] Save a word from a translated answer: My Words and the back of its flashcard show the translated meaning too.
+- [ ] Ask about this: ask a real question ("What is a peer dependency?") about sample 2. The answer is short, simple and about the text. A question about something else ("Write me a poem") gets a kind "I can only help with this text".
+- [ ] After three questions the box goes away with the reason. Open the entry from History: the three questions and answers are there, and the box does not come back.
+- [ ] Practice: "Fill the blank" hides the word in its sentence. Typing it (any letter case) says Correct; a wrong word or "Show the word" shows the right one. Words whose sentence does not use them (for example "property" in "properties") are left out, and the button is off with a reason if none fit.
+- [ ] My Words: choose React, then "Practise React (N)" starts a round of only React words, with "Practise all topics" to go back.
+- [ ] My Words: "Add a word" adds a word typed by hand; the same word again (any letter case) is refused. "Edit" changes the meaning, topic and note in place, and focus goes back to the Edit button. Escape cancels.
+- [ ] A word saved from an explanation has "See the explanation it came from", which opens it. Explaining the same text again keeps the link working.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.

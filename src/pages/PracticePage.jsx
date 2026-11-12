@@ -1,29 +1,54 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import BlankQuestion from '../components/BlankQuestion.jsx'
 import ChoiceQuestion from '../components/ChoiceQuestion.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import ListenButton from '../components/ListenButton.jsx'
 import Streak from '../components/Streak.jsx'
 import { listPracticeDays, recordPracticeDay } from '../lib/activityStore.js'
 import { dayKey, whenDue } from '../lib/days.js'
+import { blankOut } from '../lib/markWords.js'
 import { buildChoices, buildRound, canUseChoices, isDue, nextReview, schedule } from '../lib/practice.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import { listWords, setProgress } from '../lib/wordStore.js'
+import { TOPICS } from '../../shared/topics.js'
+import HelpLine from '../components/HelpLine.jsx'
 
 const noun = (n) => (n === 1 ? 'word' : 'words')
 
-// A normal round holds the words due today. "Practise anyway" (extra) uses every word.
-const makeRound = (words, today, extra) => buildRound(extra ? words : words.filter((w) => isDue(w, today)))
+// A word can be a "Fill the blank" question only if its saved sentence uses it.
+const canBlank = (w) => blankOut(w.sentence, w.word) !== null
 
+// The words a round is built from. A normal round holds the words due today; "Practise anyway"
+// (extra) uses every word. A topic round ("Practise React") holds every word of that topic.
+function candidates(words, today, extra, topic) {
+  if (topic) return words.filter((w) => w.topic === topic)
+  return extra ? words : words.filter((w) => isDue(w, today))
+}
+
+const makeRound = (words, today, extra, topic, mode) => {
+  const list = candidates(words, today, extra, topic)
+  return buildRound(mode === 'blank' ? list.filter(canBlank) : list)
+}
+
+// /practice?topic=React practises one topic. A new topic starts a new session.
 export default function PracticePage() {
-  usePageTitle('Practice')
+  const [params] = useSearchParams()
+  const asked = params.get('topic')
+  const topic = TOPICS.includes(asked) ? asked : null
+  return <PracticeSession key={topic ?? 'all'} topic={topic} />
+}
+
+function PracticeSession({ topic }) {
+  usePageTitle(topic ? `Practice ${topic}` : 'Practice')
   // The day is fixed while the page is open, so a round that runs past midnight stays one round.
   const [today] = useState(() => dayKey())
   const [extra, setExtra] = useState(false)
   // The round is built once, so level changes during it do not reorder the cards.
   const [pool, setPool] = useState(listWords)
-  const [round, setRound] = useState(() => makeRound(pool, today, false))
-  const [mode, setMode] = useState('cards') // cards | choice
+  const topicWords = topic ? pool.filter((w) => w.topic === topic) : pool
+  const [round, setRound] = useState(() => makeRound(pool, today, false, topic, 'cards'))
+  const [mode, setMode] = useState('cards') // cards | choice | blank
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [answers, setAnswers] = useState([])
@@ -32,6 +57,8 @@ export default function PracticePage() {
   const finished = round.length > 0 && index >= round.length
   const card = round[index]
   const choicesAllowed = canUseChoices(pool)
+  const blanksAllowed = candidates(pool, today, extra, topic).some(canBlank)
+  const pieces = useMemo(() => (mode === 'blank' && card ? blankOut(card.sentence, card.word) : null), [mode, card])
   const choices = useMemo(
     () => (mode === 'choice' && card ? buildChoices(card, pool) : null),
     [mode, card, pool],
@@ -53,11 +80,14 @@ export default function PracticePage() {
     next()
   }
 
-  function restart(useAll = extra) {
+  function restart(useAll = extra, nextMode = mode) {
     const words = listWords()
+    // Words that are due but cannot be blanks go back to flashcards rather than "nothing to review".
+    const useMode = nextMode === 'blank' && makeRound(words, today, useAll, topic, 'blank').length === 0 ? 'cards' : nextMode
     setExtra(useAll)
     setPool(words)
-    setRound(makeRound(words, today, useAll))
+    setMode(useMode)
+    setRound(makeRound(words, today, useAll, topic, useMode))
     setIndex(0)
     setFlipped(false)
     setAnswers([])
@@ -72,8 +102,7 @@ export default function PracticePage() {
 
   function changeMode(nextMode) {
     if (nextMode === mode) return
-    setMode(nextMode)
-    restart()
+    restart(extra, nextMode)
   }
 
   useEffect(() => {
@@ -95,12 +124,19 @@ export default function PracticePage() {
     return () => document.removeEventListener('keydown', onKeyDown)
   })
 
-  if (pool.length === 0) {
+  const topicNote = topic && (
+    <p className="soft topic-note">
+      Only {topic} words, due today or not. <Link to="/practice">Practise all topics</Link>
+    </p>
+  )
+
+  if (topicWords.length === 0) {
     return (
       <main className="page narrow-page">
         <h1>Practice</h1>
+        {topicNote}
         <EmptyState
-          title="No words to practise yet"
+          title={topic ? `No ${topic} words yet` : 'No words to practise yet'}
           text="Save some hard words first. Then they come back here as flashcards."
           linkTo="/"
           linkLabel="Explain something"
@@ -147,7 +183,7 @@ export default function PracticePage() {
           ))}
         </div>
         <section className="score-card" aria-label="Your result">
-          <p className="score-kicker">Round finished</p>
+          <p className="score-kicker">{topic ? `${topic} round finished` : 'Round finished'}</p>
           <h1>
             You knew {known} of {answers.length} {noun(answers.length)}
           </h1>
@@ -175,6 +211,7 @@ export default function PracticePage() {
                 <div className="card review-card" key={w.id}>
                   <span className="review-word">{w.word}</span>
                   <p>{w.meaning}</p>
+                  <HelpLine help={w.help} field="meaning" />
                 </div>
               ))}
             </>
@@ -217,6 +254,16 @@ export default function PracticePage() {
             >
               Multiple choice
             </button>
+            <button
+              type="button"
+              className="btn"
+              aria-pressed={mode === 'blank'}
+              disabled={!blanksAllowed}
+              aria-describedby={blanksAllowed ? undefined : 'blank-hint'}
+              onClick={() => changeMode('blank')}
+            >
+              Fill the blank
+            </button>
           </div>
         </div>
         {!choicesAllowed && (
@@ -224,7 +271,13 @@ export default function PracticePage() {
             Save at least 4 words to use multiple choice.
           </p>
         )}
-        {extra && <p className="soft">Extra practice: these words are not due yet.</p>}
+        {!blanksAllowed && (
+          <p id="blank-hint" className="soft">
+            Fill the blank needs words whose saved sentence uses the word.
+          </p>
+        )}
+        {topicNote}
+        {extra && !topic && <p className="soft">Extra practice: these words are not due yet.</p>}
         <div className="progress-row">
           <span className="progress-label">
             Card {index + 1} of {round.length}
@@ -242,7 +295,9 @@ export default function PracticePage() {
         </div>
       </div>
 
-      {mode === 'choice' ? (
+      {mode === 'blank' ? (
+        <BlankQuestion key={card.id} card={card} pieces={pieces} onAnswer={record} onNext={next} />
+      ) : mode === 'choice' ? (
         <>
           <ChoiceQuestion key={card.id} card={card} choices={choices} onAnswer={record} onNext={next} />
           <p className="soft hint">
@@ -257,7 +312,9 @@ export default function PracticePage() {
               <section className="flashcard flashcard-back" aria-label="Flashcard">
                 <span className="flashcard-word">{card.word}</span>
                 <p className="flashcard-meaning">{card.meaning}</p>
-                <p className="flashcard-sentence">{card.sentence}</p>
+                <HelpLine help={card.help} field="meaning" />
+                {card.sentence && <p className="flashcard-sentence">{card.sentence}</p>}
+                {card.note && <p className="flashcard-note">My note: {card.note}</p>}
               </section>
             ) : (
               <button

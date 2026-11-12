@@ -1374,6 +1374,174 @@ kbd {
   margin: 0;
 }
 
+/* Help in my language: the translation sits under the English, smaller, so English is read first */
+.help-line {
+  margin: 6px 0 0;
+  padding-inline-start: 12px;
+  border-inline-start: 3px solid var(--line);
+  color: var(--soft-ink);
+  font-size: 0.92em;
+  line-height: 1.5;
+}
+
+.field-hint {
+  font-size: 15px;
+}
+
+/* A native select, styled like the other boxes, with room for its arrow */
+select.search-box {
+  appearance: auto;
+  cursor: pointer;
+}
+
+/* Ask about this */
+.follow-up {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.follow-up h3 {
+  align-self: flex-start;
+}
+
+.follow-up-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.follow-up-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.follow-up-item p {
+  margin: 0;
+}
+
+.follow-up-question {
+  font-weight: 700;
+}
+
+.follow-up-box {
+  width: 100%;
+  padding: 12px 16px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 18px;
+  resize: vertical;
+}
+
+.follow-up-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.follow-up-error {
+  margin: 0;
+  color: var(--alert);
+  font-weight: 700;
+}
+
+/* Fill the blank */
+.blank-sentence {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.7;
+}
+
+.blank {
+  display: inline-block;
+  min-width: 5em;
+  height: 1.1em;
+  margin: 0 4px;
+  border-bottom: 3px solid var(--outline);
+  vertical-align: baseline;
+}
+
+.blank-filled {
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--sunshine);
+  color: var(--on-bright);
+}
+
+.blank-clue {
+  font-weight: 700;
+}
+
+.blank-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.blank-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  width: 100%;
+}
+
+.blank-row .search-box {
+  flex: 1 1 220px;
+  width: auto;
+}
+
+.topic-note a {
+  color: var(--link);
+  font-weight: 700;
+}
+
+/* My Words: notes, links back, and the add / edit form */
+.word-note {
+  font-size: 16px;
+}
+
+.word-note-label {
+  font-weight: 700;
+}
+
+.word-link {
+  align-self: flex-start;
+  color: var(--link);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.flashcard-note {
+  margin: 0;
+  font-size: 16px;
+  color: var(--soft-ink);
+}
+
+.word-form-card {
+  padding: 20px 24px;
+}
+
+.word-form-title {
+  margin: 0;
+  font-size: 22px;
+}
+
+.word-form textarea.search-box {
+  resize: vertical;
+}
+
 /* Motion: small, 150 to 400ms, each tells the user something happened */
 @keyframes rise-in {
   from {
