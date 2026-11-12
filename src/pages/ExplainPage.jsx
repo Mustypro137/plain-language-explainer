@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import CountdownRing from '../components/CountdownRing.jsx'
 import ExplainPreview from '../components/ExplainPreview.jsx'
 import FollowUp from '../components/FollowUp.jsx'
 import HelpLine from '../components/HelpLine.jsx'
 import ListenButton from '../components/ListenButton.jsx'
+import Loading from '../components/Loading.jsx'
 import MarkedText from '../components/MarkedText.jsx'
 import ResultCard from '../components/ResultCard.jsx'
-import Skeleton from '../components/Skeleton.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { askAbout, explainText } from '../lib/explainText.js'
 import { formatDate } from '../lib/formatDate.js'
@@ -37,6 +38,12 @@ const ERROR_MESSAGES = {
   offline: 'No connection',
   bad_level: 'Something went wrong. Please try again.',
   bad_language: 'Something went wrong. Please try again.',
+}
+
+// What to do next, under the message. Every error keeps the pasted text.
+const ERROR_HINTS = {
+  offline: 'Your text is still here. Check your internet, then try again.',
+  ai_failed: 'Your text is still here. The AI sent an answer we could not use.',
 }
 
 const LEVEL_NOTES = { simpler: 'Simpler version', detail: 'More detailed version' }
@@ -288,7 +295,18 @@ export default function ExplainPage() {
               {text.length.toLocaleString('en-US')} / {MAX_CHARS.toLocaleString('en-US')}
             </span>
           </div>
-          {tooLong && <p className="count-over">Please shorten the text</p>}
+          {tooLong && (
+            <div className="too-long">
+              <span className="too-long-bar" aria-hidden="true" />
+              <p className="count-over">
+                <span>Please shorten the text</span>{' '}
+                <span className="too-long-hint">
+                  Remove {(text.length - MAX_CHARS).toLocaleString('en-US')} characters. The last lines of a long
+                  stack trace are usually not needed.
+                </span>
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="explain-actions">
@@ -385,7 +403,8 @@ export default function ExplainPage() {
         {status === 'idle' && <ExplainPreview />}
 
         {error && (
-          <div className="error-box" role="alert">
+          <div className={`error-box${error === 'busy' && wait ? ' error-wait' : ''}`} role="alert">
+            {error === 'busy' && wait && waiting && <CountdownRing remaining={remaining} total={wait.total} />}
             {error === 'busy' && wait ? (
               <div className="wait-text">
                 <span>{LIMIT_TITLES[wait.limit ?? 'unknown']}</span>
@@ -403,9 +422,12 @@ export default function ExplainPage() {
                 )}
               </div>
             ) : (
-              <span>{ERROR_MESSAGES[error]}</span>
+              <div className="error-text">
+                <span className="error-title">{ERROR_MESSAGES[error]}</span>
+                {ERROR_HINTS[error] && <span className="error-hint">{ERROR_HINTS[error]}</span>}
+              </div>
             )}
-            {(error === 'offline' || (error === 'busy' && wait && !waiting)) && (
+            {(error === 'offline' || error === 'ai_failed' || (error === 'busy' && wait && !waiting)) && (
               <button type="button" className="btn btn-outline" onClick={() => run(request)}>
                 Try again
               </button>
@@ -413,20 +435,20 @@ export default function ExplainPage() {
           </div>
         )}
 
-        {loading && <Skeleton />}
+        {loading && <Loading text={request.text} />}
 
         {result && (
           <>
-            <ResultCard tone="sunshine" title="In simple words" raised>
+            <ResultCard title="In simple words" raised>
               <p className="result-lead">{result.explanation}</p>
               <HelpLine help={result.help} field="explanation" />
             </ResultCard>
-            <ResultCard tone="coral" title="Why this happens">
+            <ResultCard title="Why this happens">
               <p>{result.why}</p>
               <HelpLine help={result.help} field="why" />
             </ResultCard>
             {result.steps.length > 0 && (
-              <ResultCard tone="teal" title="What to try next">
+              <ResultCard title="What to try next">
                 <ol className="steps">
                   {result.steps.map((s) => (
                     <li key={s}>{s}</li>
@@ -435,12 +457,12 @@ export default function ExplainPage() {
               </ResultCard>
             )}
             {result.example && (
-              <ResultCard tone="violet" title="Practical example">
+              <ResultCard title="Practical example">
                 <pre className="code-block">{result.example}</pre>
               </ResultCard>
             )}
             {result.words.length > 0 && (
-              <ResultCard tone="ink" title="Hard words">
+              <ResultCard title="Hard words">
                 <MarkedText
                   text={request.text}
                   words={result.words}

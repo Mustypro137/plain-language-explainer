@@ -907,3 +907,33 @@ describe('ask about this', () => {
     expect(await screen.findByText('Español.')).toHaveAttribute('lang', 'es')
   })
 })
+
+describe('loading and error states', () => {
+  test('while waiting, the pasted lines show with how many there are', async () => {
+    explainText.mockReturnValue(new Promise(() => {}))
+    const user = setup()
+    await user.type(screen.getByLabelText('Your text'), 'first line{Enter}second line')
+    await user.click(explainButton())
+    expect(screen.getByText('Reading your 2 lines…')).toHaveAttribute('role', 'status')
+    expect(screen.getByText('second line', { selector: 'code' })).toBeInTheDocument()
+  })
+
+  test('offline and a broken answer say the text is kept, and both offer Try again', async () => {
+    explainText.mockResolvedValueOnce({ ok: false, error: 'ai_failed' })
+    const user = setup()
+    await submit(user)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Your text is still here.')
+    explainText.mockResolvedValueOnce({ ok: true, data: docsData })
+    await user.click(within(alert).getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText(docsData.explanation)).toBeInTheDocument()
+  })
+
+  test('too long says how many characters to remove', async () => {
+    const user = setup()
+    await user.click(screen.getByLabelText('Your text'))
+    await user.paste('a'.repeat(3040))
+    expect(screen.getByText('Please shorten the text')).toBeInTheDocument()
+    expect(screen.getByText(/Remove 40 characters\./)).toBeInTheDocument()
+  })
+})

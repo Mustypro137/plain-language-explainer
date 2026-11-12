@@ -1,7 +1,7 @@
-export default function ResultCard({ tone, title, raised = false, children }) {
+export default function ResultCard({ title, raised = false, children }) {
   return (
     <article className={`card result-card${raised ? ' card-raised' : ''}`}>
-      <h3 className={`label-chip tone-${tone}`}>{title}</h3>
+      <h3 className="label-chip">{title}</h3>
       {children}
     </article>
   )

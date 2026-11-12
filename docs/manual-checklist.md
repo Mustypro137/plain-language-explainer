@@ -99,6 +99,17 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] Reload twice: the `/assets/` files come from the browser's cache (`max-age=31536000, immutable`).
 - [ ] Confetti plays after a round with 4 of 5 or better, and not after a weaker one.
 
+## Design step 1 (Clear Lens colours, type and states)
+
+- [ ] Light mode: grey page, white panels with thin lines, indigo buttons and links, no hard shadows. Headings in Space Grotesk, reading text in Atkinson Hyperlegible, code in IBM Plex Mono.
+- [ ] Dark mode is the night sky (deep blue), and every page passes the browser's contrast check in both modes.
+- [ ] While the AI works, your own lines show at once with a placeholder beside each, and "Reading your N lines…". On a slow answer, "Still working. The free AI is busy right now." appears after 8 seconds.
+- [ ] The free AI limit shows an amber box with a ring that empties as the countdown runs.
+- [ ] No connection and a broken answer both say "Your text is still here" and offer Try again.
+- [ ] Text over 3,000 characters shows a red bar and how many characters to remove.
+- [ ] Empty My Words, Practice and History show the dashed-star picture and a main button.
+- [ ] The four top-bar links fit at 320px and 360px wide, and the tab icon is the dark "Aa" square.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.
