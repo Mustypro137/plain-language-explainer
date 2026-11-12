@@ -56,7 +56,8 @@ describe('LineByLine', () => {
     expect(mark).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText('A value that is not set.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save undefined to My Words' }))
-    expect(onSave).toHaveBeenCalledWith(words[0])
+    // The button comes too: the star flies from it to My Words.
+    expect(onSave).toHaveBeenCalledWith(words[0], expect.any(HTMLButtonElement))
     await user.click(mark)
     expect(screen.queryByText('A value that is not set.')).not.toBeInTheDocument()
   })

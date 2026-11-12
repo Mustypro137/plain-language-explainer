@@ -17,7 +17,7 @@ export default function WordPanel({ word, isSaved, onSave }) {
         className="btn btn-outline"
         disabled={saved}
         aria-label={`${saved ? 'Saved' : 'Save'} ${word.word} to My Words`}
-        onClick={() => onSave(word)}
+        onClick={(e) => onSave(word, e.currentTarget)}
       >
         {saved ? 'Saved' : 'Save to My Words'}
       </button>

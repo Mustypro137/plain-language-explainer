@@ -26,6 +26,7 @@ import {
 } from '../lib/historyStore.js'
 import { getLanguage, setLanguage as storeLanguage } from '../lib/languageStore.js'
 import { SAMPLES } from '../lib/samples.js'
+import { flyStar } from '../lib/flyStar.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import { hasWord, saveWord } from '../lib/wordStore.js'
 import { LANGUAGES } from '../../shared/languages.js'
@@ -250,14 +251,18 @@ export default function ExplainPage() {
     return { ok: true }
   }
 
-  function save(w) {
+  // el: the Save button, where the star starts its flight to My Words.
+  function save(w, el) {
     const r = saveWord({ ...w, source: entryId ?? undefined })
     if (!r.ok && r.reason === 'storage') {
       toast('Your browser could not save this word.')
       return
     }
     setSaved((prev) => new Set(prev).add(wordKey(w.word)))
-    if (r.ok) toast('Saved to My Words')
+    if (r.ok) {
+      toast('Saved to My Words')
+      flyStar(el)
+    }
   }
 
   async function copy() {
@@ -509,7 +514,7 @@ export default function ExplainPage() {
                           className="btn btn-outline"
                           disabled={isSaved}
                           aria-label={`${isSaved ? 'Saved' : 'Save'} ${w.word}`}
-                          onClick={() => save(w)}
+                          onClick={(e) => save(w, e.currentTarget)}
                         >
                           {isSaved ? 'Saved' : 'Save'}
                         </button>

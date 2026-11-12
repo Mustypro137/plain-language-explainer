@@ -6,7 +6,9 @@ import LevelDots from '../components/LevelDots.jsx'
 import ListenButton from '../components/ListenButton.jsx'
 import Streak from '../components/Streak.jsx'
 import { useToast } from '../components/Toast.jsx'
+import WordDetail from '../components/WordDetail.jsx'
 import WordForm from '../components/WordForm.jsx'
+import WordSky from '../components/WordSky.jsx'
 import { listPracticeDays } from '../lib/activityStore.js'
 import { MAX_FILE_BYTES, downloadBackup, readBackup } from '../lib/backup.js'
 import { dayKey, whenDue } from '../lib/days.js'
@@ -30,6 +32,17 @@ function topicCounts(words) {
   return [...counts].sort((a, b) => b[1] - a[1] || TOPICS.indexOf(a[0]) - TOPICS.indexOf(b[0]))
 }
 
+// List or Sky: remembered in this browser only, as a convenience.
+const VIEW_KEY = 'ple.words-view.v1'
+
+function readView() {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'sky' ? 'sky' : 'list'
+  } catch {
+    return 'list'
+  }
+}
+
 function importMessage(words, explanations) {
   if (words === 0 && explanations === 0) return 'Nothing new in this file: everything in it is already here.'
   const added = [words > 0 && count(words, 'word', 'words'), explanations > 0 && count(explanations, 'explanation', 'explanations')]
@@ -47,6 +60,9 @@ export default function WordsPage() {
   // The word being edited (its id), and whether the "Add a word" form is open.
   const [editing, setEditing] = useState(null)
   const [adding, setAdding] = useState(false)
+  const [view, setView] = useState(readView)
+  // The star chosen in the Sky view.
+  const [selectedId, setSelectedId] = useState(null)
   // Where focus goes when a form closes: the button that opened it.
   const returnFocus = useRef(null)
   // Saved words link to the explanation they came from while History still has it.
@@ -74,6 +90,31 @@ export default function WordsPage() {
       return
     }
     toast(`Deleted “${removed.word.word}”`, { action: { label: 'Undo', onClick: () => undo(removed) } })
+  }
+
+  // A chosen star's panel may sit below the sky: bring it into view, without moving focus.
+  useEffect(() => {
+    if (!selectedId) return
+    const panel = document.querySelector('.word-detail')
+    if (!panel?.scrollIntoView) return
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    panel.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' })
+  }, [selectedId])
+
+  function chooseView(next) {
+    setView(next)
+    setSelectedId(null)
+    try {
+      localStorage.setItem(VIEW_KEY, next)
+    } catch {
+      // The choice still holds until the page is closed.
+    }
+  }
+
+  function closeWord(id) {
+    setSelectedId(null)
+    returnFocus.current = null
+    document.querySelector(`[data-star="${id}"]`)?.focus()
   }
 
   function closeForms(focusId) {
@@ -104,7 +145,7 @@ export default function WordsPage() {
 
   function editWord(id, v) {
     if (!updateWord(id, { meaning: v.meaning, note: v.note, topic: v.topic })) return 'Your browser could not save the change.'
-    closeForms(`edit-${id}`)
+    closeForms(view === 'sky' ? 'word-detail-edit' : `edit-${id}`)
     setWords(listWords())
     toast('Changes saved')
     return null
@@ -234,6 +275,18 @@ export default function WordsPage() {
 
           <Streak days={listPracticeDays()} today={today} />
 
+          <div className="mode-switch view-switch" role="group" aria-label="View">
+            <button type="button" className="btn" aria-pressed={view === 'list'} onClick={() => chooseView('list')}>
+              List
+            </button>
+            <button type="button" className="btn" aria-pressed={view === 'sky'} onClick={() => chooseView('sky')}>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z" />
+              </svg>
+              Sky
+            </button>
+          </div>
+
           <div className="topic-filter" role="group" aria-label="Filter by topic">
             {[['All', words.length], ...counts].map(([t, n]) => (
               <button
@@ -264,6 +317,34 @@ export default function WordsPage() {
 
           {shown.length === 0 ? (
             <p className="soft">No words match your search.</p>
+          ) : view === 'sky' ? (
+            <div className="sky-layout">
+              <WordSky words={shown} today={today} selectedId={selectedId} onSelect={setSelectedId} />
+              {(() => {
+                const w = shown.find((x) => x.id === selectedId)
+                if (!w) return null
+                return editing === w.id ? (
+                  <div className="card word-form-card word-detail">
+                    <WordForm
+                      title={`Edit “${w.word}”`}
+                      submitLabel="Save changes"
+                      initial={w}
+                      onSubmit={(v) => editWord(w.id, v)}
+                      onCancel={() => closeForms('word-detail-edit')}
+                    />
+                  </div>
+                ) : (
+                  <WordDetail
+                    key={w.id}
+                    word={w}
+                    today={today}
+                    sourceKept={Boolean(w.source) && kept.has(w.source)}
+                    onClose={() => closeWord(w.id)}
+                    onEdit={() => setEditing(w.id)}
+                  />
+                )
+              })()}
+            </div>
           ) : (
             <ul className="word-cards">
               {shown.map((w) =>
