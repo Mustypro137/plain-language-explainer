@@ -344,6 +344,113 @@ test('an entry opened from History can be explained differently', async () => {
   expect(detail()).toBeEnabled()
 })
 
+describe('hard words marked in the pasted text', () => {
+  const pasted = "TypeError: Cannot read properties of undefined (reading 'map')"
+
+  async function answer(user) {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    await submit(user, pasted)
+    await screen.findByText(errorData.explanation)
+  }
+
+  test('the hard words in the text become buttons', async () => {
+    const user = setup()
+    await answer(user)
+    expect(screen.getByText('Tap a marked word in your text to see what it means.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'undefined', expanded: false })).toBeInTheDocument()
+  })
+
+  test('a tap shows the meaning, and a second tap hides it', async () => {
+    const user = setup()
+    await answer(user)
+    const mark = screen.getByRole('button', { name: 'undefined', expanded: false })
+    await user.click(mark)
+    expect(mark).toHaveAttribute('aria-expanded', 'true')
+    const panel = document.getElementById(mark.getAttribute('aria-controls'))
+    expect(panel).toHaveTextContent('A value that is not set.')
+    await user.click(mark)
+    expect(mark).toHaveAttribute('aria-expanded', 'false')
+    expect(panel).toBeEmptyDOMElement()
+  })
+
+  test('Save in the panel saves the word, and the list shows it as saved too', async () => {
+    const user = setup()
+    await answer(user)
+    await user.click(screen.getByRole('button', { name: 'undefined', expanded: false }))
+    await user.click(screen.getByRole('button', { name: 'Save undefined to My Words' }))
+    expect(hasWord('undefined')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Saved undefined to My Words' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Saved undefined' })).toBeDisabled()
+  })
+
+  test('nothing is marked when no hard word is in the text', async () => {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user, 'some text')
+    await screen.findByText(errorData.explanation)
+    expect(screen.queryByText(/^Tap a marked word/)).not.toBeInTheDocument()
+  })
+})
+
+describe('reusing History to save AI calls', () => {
+  test('the same text at the same level is shown from History without asking the AI', async () => {
+    const item = addHistory({ text: 'kept text', result: errorData })
+    const user = setup()
+    await submit(user, '  kept text ')
+    expect(screen.getByText(errorData.explanation)).toBeInTheDocument()
+    expect(screen.getByText(/From your history/)).toBeInTheDocument()
+    expect(screen.getByTestId('address')).toHaveTextContent(`/?item=${item.id}`)
+    expect(explainText).not.toHaveBeenCalled()
+  })
+
+  test('a kept answer at another level is not used', async () => {
+    addHistory({ text: 'kept text', result: errorData, level: 'simpler' })
+    explainText.mockResolvedValue({ ok: true, data: docsData })
+    const user = setup()
+    await submit(user, 'kept text')
+    expect(explainText).toHaveBeenCalledWith('kept text')
+  })
+
+  test('Make it simpler uses a kept simpler answer and says which version it is', async () => {
+    addHistory({ text: 'kept text', result: { ...errorData, explanation: 'Kept simpler.' }, level: 'simpler' })
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user, 'kept text')
+    await screen.findByText(errorData.explanation)
+    // The normal answer just replaced the simpler one in History, so this asks the AI.
+    explainText.mockResolvedValue({ ok: true, data: { ...errorData, explanation: 'New simpler.' } })
+    await user.click(screen.getByRole('button', { name: 'Make it simpler' }))
+    expect(await screen.findByText('New simpler.')).toBeInTheDocument()
+    expect(listHistory()[0].level).toBe('simpler')
+  })
+
+  test('an opened simpler entry says Simpler version', () => {
+    const item = addHistory({ text: 'kept text', result: errorData, level: 'simpler' })
+    setup(`/?item=${item.id}`)
+    expect(screen.getByText('Simpler version')).toBeInTheDocument()
+  })
+
+  test('Ask the AI again gets a fresh answer for a kept one', async () => {
+    addHistory({ text: 'kept text', result: errorData })
+    explainText.mockResolvedValue({ ok: true, data: { ...docsData, explanation: 'Fresh answer.' } })
+    const user = setup()
+    await submit(user, 'kept text')
+    await user.click(screen.getByRole('button', { name: 'Ask the AI again' }))
+    expect(await screen.findByText('Fresh answer.')).toBeInTheDocument()
+    expect(explainText).toHaveBeenCalledWith('kept text')
+    expect(screen.queryByText(/From your history/)).not.toBeInTheDocument()
+    expect(listHistory().map((h) => h.result.explanation)).toEqual(['Fresh answer.'])
+  })
+
+  test('Ask the AI again keeps the level of the entry', async () => {
+    const item = addHistory({ text: 'kept text', result: errorData, level: 'detail' })
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup(`/?item=${item.id}`)
+    await user.click(screen.getByRole('button', { name: 'Ask the AI again' }))
+    expect(explainText).toHaveBeenCalledWith('kept text', 'detail')
+  })
+})
+
 describe('before the first answer', () => {
   test('the answer column shows what the five parts will be', () => {
     setup()
@@ -589,6 +696,19 @@ describe('when the free AI limit is used up', () => {
     await submit(user)
     expect(await screen.findByRole('alert')).toHaveTextContent('The free AI limit is used up for today.')
     expect(screen.getByText('You can try again in 2 hours 14 minutes.', { selector: '[aria-hidden="true"]' })).toBeInTheDocument()
+  })
+
+  test('the visitor limit says so, counts down, and points to Practice', async () => {
+    explainText.mockResolvedValue({ ok: false, error: 'busy', retryAfter: 60, limit: 'visitor' })
+    show()
+    await submit(user)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('You have asked many times in a short time.')
+    expect(screen.getByText('You can try again in 1 minute.', { selector: '[aria-hidden="true"]' })).toBeInTheDocument()
+    expect(within(alert).getByRole('link', { name: 'Practise your saved words while you wait' })).toHaveAttribute(
+      'href',
+      '/practice',
+    )
   })
 
   test('without a wait time it shows the old busy message', async () => {

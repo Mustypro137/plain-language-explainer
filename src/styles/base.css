@@ -1159,6 +1159,221 @@ kbd {
   font-size: 18px;
 }
 
+/* A low-key button that reads like a link */
+.btn-quiet {
+  min-height: 40px;
+  padding: 4px 12px;
+  border-color: var(--line);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* "From your history" with "Ask the AI again" beside it */
+.history-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.wait-link {
+  margin-top: 6px;
+  color: var(--link);
+  font-weight: 700;
+}
+
+/* Due words on the Practice link */
+.main-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.nav-count {
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--violet);
+  color: var(--on-strong);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+}
+
+/* Streak and the last seven days */
+.streak {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding: 18px 24px;
+}
+
+.streak-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.streak-title {
+  font-size: 24px;
+}
+
+.week {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--soft-ink);
+}
+
+.week-box {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.week-day-on .week-box {
+  border-color: var(--outline);
+  background: var(--teal);
+}
+
+.week-day-today {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.week-day-today .week-box {
+  border-color: var(--outline);
+}
+
+/* Practice: nothing due today */
+.all-done {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.all-done h2 {
+  font-size: 28px;
+}
+
+/* Listen buttons */
+.listen-btn {
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  flex: none;
+  border-color: var(--line);
+}
+
+.word-title-row,
+.word-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.word-title-row {
+  align-self: flex-start;
+}
+
+.choice-card .word-name-row {
+  justify-content: center;
+}
+
+.flashcard-wrap {
+  position: relative;
+}
+
+.flashcard-listen {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: var(--card);
+}
+
+.review-day {
+  font-size: 15px;
+  color: var(--soft-ink);
+}
+
+/* The user's text with the hard words marked */
+.marked {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 16px;
+}
+
+.marked-hint {
+  font-size: 15px;
+}
+
+.marked-text {
+  max-height: 16em;
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mark {
+  padding: 0 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline wavy var(--coral);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.mark:hover,
+.mark-on {
+  background: var(--sunshine);
+  color: var(--on-bright);
+}
+
+.word-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 16px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  animation: rise-in 200ms ease-out;
+}
+
+.word-panel p {
+  margin: 0;
+}
+
 /* Motion: small, 150 to 400ms, each tells the user something happened */
 @keyframes rise-in {
   from {

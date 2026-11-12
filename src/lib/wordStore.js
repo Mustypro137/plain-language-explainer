@@ -1,4 +1,5 @@
 import { normaliseTopic } from '../../shared/topics.js'
+import { isDayKey } from './days.js'
 
 const KEY = 'ple.words.v1'
 
@@ -26,20 +27,32 @@ function read() {
   }
 }
 
+// Sent after every change, so parts of the page that show counts (the Practice link) update.
+export const WORDS_CHANGED = 'ple:words-changed'
+
 function write(words) {
   try {
     localStorage.setItem(KEY, JSON.stringify(words))
-    return true
   } catch {
     return false
   }
+  window.dispatchEvent(new Event(WORDS_CHANGED))
+  return true
 }
 
 const normalise = (word) => String(word).trim().toLowerCase()
 
+const isGap = (v) => Number.isInteger(v) && v >= 0
+
 // Words saved before topics existed have none; they show as General without being rewritten.
+// Words never practised have no due day or gap: they are due now. Broken values count as missing.
 export function listWords() {
-  return read().map((w) => ({ ...w, topic: normaliseTopic(w.topic) }))
+  return read().map((w) => ({
+    ...w,
+    topic: normaliseTopic(w.topic),
+    due: isDayKey(w.due) ? w.due : undefined,
+    interval: isGap(w.interval) ? w.interval : undefined,
+  }))
 }
 
 export function hasWord(word) {
@@ -79,6 +92,36 @@ export function restoreWord({ word, index }) {
   return write(words)
 }
 
-export function setBox(id, box) {
-  write(read().map((w) => (w.id === id ? { ...w, box } : w)))
+// Adds the words from a backup file. Entries that are not real words are skipped, and a word
+// already saved (in any letter case) keeps the copy that is here. Only known fields are kept.
+export function importWords(list) {
+  const words = read()
+  const seen = new Set(words.map((w) => normalise(w.word)))
+  const ids = new Set(words.map((w) => w.id))
+  let added = 0
+  for (const w of Array.isArray(list) ? list : []) {
+    if (!isWord(w) || w.word.trim() === '' || seen.has(normalise(w.word)) || ids.has(w.id)) continue
+    seen.add(normalise(w.word))
+    ids.add(w.id)
+    words.push({
+      id: w.id,
+      word: w.word.trim(),
+      meaning: w.meaning,
+      sentence: w.sentence,
+      topic: normaliseTopic(w.topic),
+      savedAt: w.savedAt,
+      box: w.box,
+      ...(isGap(w.interval) && { interval: w.interval }),
+      ...(isDayKey(w.due) && { due: w.due }),
+    })
+    added += 1
+  }
+  if (added === 0) return { ok: true, added }
+  words.sort((a, b) => b.savedAt.localeCompare(a.savedAt))
+  return write(words) ? { ok: true, added } : { ok: false, added: 0 }
+}
+
+// After a practice answer: the level (box 1 to 3), the gap in days and the due day.
+export function setProgress(id, { box, interval, due }) {
+  return write(read().map((w) => (w.id === id ? { ...w, box, interval, due } : w)))
 }

@@ -1,4 +1,58 @@
-import { CHOICES, ROUND_SIZE, buildChoices, buildRound, canUseChoices, nextBox } from './practice.js'
+import {
+  CHOICES,
+  INTERVALS,
+  ROUND_SIZE,
+  buildChoices,
+  buildRound,
+  canUseChoices,
+  isDue,
+  nextBox,
+  nextInterval,
+  nextReview,
+  schedule,
+} from './practice.js'
+
+test('the gaps between reviews are 1, 3, 7, 16 and 35 days', () => expect(INTERVALS).toEqual([1, 3, 7, 16, 35]))
+
+test('nextInterval grows with each "knew it" and stops at 35 days', () => {
+  const gaps = []
+  let n = 0
+  for (let i = 0; i < 7; i++) gaps.push((n = nextInterval(n, true)))
+  expect(gaps).toEqual([1, 3, 7, 16, 35, 35, 35])
+})
+
+test('nextInterval starts again at 0 days on "forgot"', () => expect(nextInterval(16, false)).toBe(0))
+
+test('schedule sets the level, the gap and the due day', () => {
+  const word = { box: 2, interval: 3 }
+  expect(schedule(word, true, '2026-01-30')).toEqual({ box: 3, interval: 7, due: '2026-02-06' })
+  expect(schedule(word, false, '2026-01-30')).toEqual({ box: 1, interval: 0, due: '2026-01-30' })
+})
+
+test('schedule treats a word never practised as gap 0', () =>
+  expect(schedule({ box: 1 }, true, '2026-01-30')).toEqual({ box: 2, interval: 1, due: '2026-01-31' }))
+
+test('isDue: no due day, a past day and today are due; a later day is not', () => {
+  expect(isDue({}, '2026-01-05')).toBe(true)
+  expect(isDue({ due: null }, '2026-01-05')).toBe(true)
+  expect(isDue({ due: '2026-01-04' }, '2026-01-05')).toBe(true)
+  expect(isDue({ due: '2026-01-05' }, '2026-01-05')).toBe(true)
+  expect(isDue({ due: '2026-01-06' }, '2026-01-05')).toBe(false)
+})
+
+test('nextReview finds the soonest later day and counts its words', () => {
+  const words = [{ due: '2026-01-09' }, { due: '2026-01-07' }, { due: '2026-01-07' }, { due: '2026-01-05' }, {}]
+  expect(nextReview(words, '2026-01-05')).toEqual({ day: '2026-01-07', count: 2 })
+  expect(nextReview([{ due: '2026-01-05' }, {}], '2026-01-05')).toBeNull()
+})
+
+test('buildRound puts the word that waited longest first within a level', () => {
+  const words = [
+    { ...w('late', 2, '2026-01-01'), due: '2026-01-05' },
+    { ...w('early', 2, '2026-01-02'), due: '2026-01-02' },
+  ]
+  expect(buildRound(words).map((x) => x.id)).toEqual(['early', 'late'])
+})
 
 const w = (id, box, savedAt) => ({ id, word: id, meaning: 'm', sentence: 's', box, savedAt })
 

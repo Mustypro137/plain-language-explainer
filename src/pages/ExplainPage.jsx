@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import ExplainPreview from '../components/ExplainPreview.jsx'
+import ListenButton from '../components/ListenButton.jsx'
+import MarkedText from '../components/MarkedText.jsx'
 import ResultCard from '../components/ResultCard.jsx'
 import Skeleton from '../components/Skeleton.jsx'
 import { useToast } from '../components/Toast.jsx'
@@ -8,7 +10,7 @@ import { explainText } from '../lib/explainText.js'
 import { formatDate } from '../lib/formatDate.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
 import { formatWait } from '../lib/formatWait.js'
-import { addHistory, getHistoryItem } from '../lib/historyStore.js'
+import { addHistory, findHistory, getHistoryItem, levelOf } from '../lib/historyStore.js'
 import { SAMPLES } from '../lib/samples.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import { hasWord, saveWord } from '../lib/wordStore.js'
@@ -29,6 +31,7 @@ const LEVEL_NOTES = { simpler: 'Simpler version', detail: 'More detailed version
 const LIMIT_TITLES = {
   minute: 'The free AI limit is used up for this minute.',
   day: 'The free AI limit is used up for today.',
+  visitor: 'You have asked many times in a short time. The free AI is shared by everyone.',
   unknown: 'The free AI limit is used up.',
 }
 
@@ -53,7 +56,8 @@ export default function ExplainPage() {
   usePageTitle(null)
   const toast = useToast()
   const [params, setParams] = useSearchParams()
-  // An entry opened from the History page: shown as it was saved, with no AI call.
+  // A History entry on screen (opened from the History page, or found for the same text):
+  // shown as it was saved, with no AI call.
   const [opened, setOpened] = useState(() => getHistoryItem(params.get('item')) ?? null)
   const [text, setText] = useState(opened?.text ?? '')
   const [status, setStatus] = useState(opened ? 'done' : 'idle') // idle | loading | done | error
@@ -61,7 +65,7 @@ export default function ExplainPage() {
   const [error, setError] = useState(null)
   const [saved, setSaved] = useState(() => (opened ? savedKeys(opened.result.words) : new Set()))
   // The text and level that the answer (or error) on screen belongs to.
-  const [request, setRequest] = useState(opened ? { text: opened.text, level: null } : null)
+  const [request, setRequest] = useState(opened ? { text: opened.text, level: levelOf(opened) } : null)
   // Set when the free AI limit is used up: { until (ms), total (seconds), limit }.
   const [wait, setWait] = useState(null)
   const [now, setNow] = useState(() => Date.now())
@@ -124,8 +128,30 @@ export default function ExplainPage() {
     setStatus('done')
   }
 
-  async function run(req) {
+  // The same text at the same level was explained before: show that answer and save an AI call.
+  function showKept(item, req) {
+    userAsked.current = true
+    setOpened(item)
+    setParams({ item: item.id }, { replace: true })
+    setRequest(req)
+    setResult(item.result)
+    setSaved(savedKeys(item.result.words))
+    setError(null)
+    setIsSample(false)
+    setStatus('done')
+  }
+
+  // fresh: ask the AI even when History has an answer ("Ask the AI again").
+  async function run(req, { fresh = false } = {}) {
     if (loading || waiting) return
+    if (!fresh) {
+      const kept = findHistory(req.text, req.level)
+      // Pressing Explain on the entry already on screen asks again, as before.
+      if (kept && kept.id !== opened?.id) {
+        showKept(kept, req)
+        return
+      }
+    }
     userAsked.current = true
     setRequest(req)
     setStatus('loading')
@@ -136,7 +162,7 @@ export default function ExplainPage() {
     leaveHistoryEntry()
     const answer = await (req.level ? explainText(req.text, req.level) : explainText(req.text))
     if (answer.ok) {
-      addHistory({ text: req.text, result: answer.data })
+      addHistory({ text: req.text, result: answer.data, level: req.level })
       setSaved(savedKeys(answer.data.words))
       setResult(answer.data)
       setStatus('done')
@@ -251,9 +277,14 @@ export default function ExplainPage() {
         </div>
 
         {opened && (
-          <p className="soft history-note">
-            From your history · <time dateTime={opened.savedAt}>{formatDate(opened.savedAt)}</time>
-          </p>
+          <div className="history-row">
+            <p className="soft history-note">
+              From your history · <time dateTime={opened.savedAt}>{formatDate(opened.savedAt)}</time>
+            </p>
+            <button type="button" className="btn btn-quiet" onClick={() => run(request, { fresh: true })}>
+              Ask the AI again
+            </button>
+          </div>
         )}
 
         {isSample && (
@@ -274,6 +305,9 @@ export default function ExplainPage() {
                     {/* Screen readers hear the wait once; the visible line counts down. */}
                     <span className="visually-hidden">You can try again in {formatWait(wait.total)}.</span>
                     <span aria-hidden="true">You can try again in {formatWait(remaining)}.</span>
+                    <Link className="wait-link" to="/practice">
+                      Practise your saved words while you wait
+                    </Link>
                   </>
                 ) : (
                   <span>You can try again now.</span>
@@ -316,13 +350,22 @@ export default function ExplainPage() {
             )}
             {result.words.length > 0 && (
               <ResultCard tone="ink" title="Hard words">
+                <MarkedText
+                  text={request.text}
+                  words={result.words}
+                  isSaved={(w) => saved.has(wordKey(w.word))}
+                  onSave={save}
+                />
                 <ul className="word-rows">
                   {result.words.map((w) => {
                     const isSaved = saved.has(wordKey(w.word))
                     return (
                       <li key={w.word} className="word-row">
                         <div className="word-row-text">
-                          <span className={`word-name${isSaved ? ' word-name-saved' : ''}`}>{w.word}</span>
+                          <div className="word-name-row">
+                            <span className={`word-name${isSaved ? ' word-name-saved' : ''}`}>{w.word}</span>
+                            <ListenButton text={w.word} />
+                          </div>
                           <p>{w.meaning}</p>
                         </div>
                         <button

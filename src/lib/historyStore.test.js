@@ -3,7 +3,10 @@ import {
   addHistory,
   clearHistory,
   deleteHistoryItem,
+  findHistory,
   getHistoryItem,
+  importHistory,
+  levelOf,
   listHistory,
   restoreHistory,
 } from './historyStore.js'
@@ -38,6 +41,31 @@ test('adds an explanation and lists it', () => {
   expect(typeof item.id).toBe('string')
   expect(new Date(item.savedAt).toISOString()).toBe(item.savedAt)
   expect(listHistory()).toEqual([item])
+})
+
+test('keeps the level of the answer; a normal answer has level null', () => {
+  expect(addHistory({ text: 'a', result: result() }).level).toBeNull()
+  expect(addHistory({ text: 'b', result: result(), level: 'simpler' }).level).toBe('simpler')
+  expect(listHistory().map((h) => h.level)).toEqual(['simpler', null])
+})
+
+test('findHistory finds the kept answer for the same text and level only', () => {
+  const a = addHistory({ text: 'same text', result: result(), level: 'detail' })
+  expect(findHistory('same text', 'detail')).toEqual(a)
+  expect(findHistory('same text', null)).toBeUndefined()
+  expect(findHistory('same text')).toBeUndefined()
+  expect(findHistory('other text', 'detail')).toBeUndefined()
+})
+
+test('an entry saved before levels existed counts as a normal answer', () => {
+  localStorage.setItem(KEY, JSON.stringify([stored()]))
+  expect(findHistory('good text', null)).toEqual(stored())
+  expect(levelOf(listHistory()[0])).toBeNull()
+})
+
+test('an entry with an unknown level is skipped', () => {
+  localStorage.setItem(KEY, JSON.stringify([stored({ level: 'harder' }), stored({ id: 'ok', text: 'ok' })]))
+  expect(listHistory().map((h) => h.id)).toEqual(['ok'])
 })
 
 test('lists the newest first', () => {
@@ -126,6 +154,13 @@ test('restoreHistory still keeps only the newest entries', () => {
   restoreHistory(removed)
   expect(listHistory()).toHaveLength(MAX_ITEMS)
   expect(texts()[0]).toBe('new')
+})
+
+test('importHistory adds new entries, skips broken ones and counts what was added', () => {
+  put([at('here', '2026-01-03T00:00:00Z')])
+  const r = importHistory([at('a', '2026-01-01T00:00:00Z'), at('here', '2026-01-01T00:00:00Z'), { id: 'broken' }])
+  expect(r).toEqual({ ok: true, added: 1 })
+  expect(texts()).toEqual(['here', 'a'])
 })
 
 test('returns an empty list when storage holds broken JSON', () => {
