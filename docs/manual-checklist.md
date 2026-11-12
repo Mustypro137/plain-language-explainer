@@ -61,6 +61,22 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] The app name in the top bar goes to the Explain page.
 - [ ] A link to the site pasted into a chat app shows the title, the description and the share image.
 
+## Version 3, phase 2 checks
+
+- [ ] The Vercel Firewall rule from the README is published. Press Explain 11 times within a minute (each with a new text): the 11th says "You have asked many times in a short time", counts down, and links to Practice.
+- [ ] Explain a text, then explain the same text again: the answer shows "From your history" at once, with no `/api/explain` request in the Network tab. "Ask the AI again" makes one request.
+- [ ] Make it simpler, then open that entry from History: it says "Simpler version", and "Ask the AI again" sends `level: "simpler"`.
+- [ ] Practice shows only the words due today. After "I knew it" a word says "Review tomorrow" on My Words; after "I forgot" it says "Review today".
+- [ ] With nothing due, Practice says when the next review is and "Practise anyway" starts a round of all words.
+- [ ] The Practice link shows the number of due words, and it changes as soon as a word is saved or answered, without a reload.
+- [ ] Finish a round: the streak goes up by one for today (only once per day), on the results screen and on My Words. The week strip marks today.
+- [ ] Export, then Clear all in History and delete a word, then Import the file: the word and the explanations come back, with the message "Added …". Importing the same file again says "Nothing new in this file".
+- [ ] Import a file that is not a backup (any other JSON or a picture): "This file is not a Plain-Language Explainer backup." and nothing changes.
+- [ ] An old export file (`my-words-….json`, version 1) still imports.
+- [ ] The speaker button reads the word aloud on the Explain page, on My Words, on a flashcard and in multiple choice. In a browser without speech the button is not there.
+- [ ] After an answer, the hard words are marked in your own text. A tap shows the meaning with Listen and Save; a second tap closes it. A word the AI changed (for example "property" for "properties") is simply not marked.
+- [ ] Space on a focused speaker button on a flashcard plays the word, and does not flip the card.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.

@@ -2,21 +2,32 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ChoiceQuestion from '../components/ChoiceQuestion.jsx'
 import EmptyState from '../components/EmptyState.jsx'
-import { buildChoices, buildRound, canUseChoices, nextBox } from '../lib/practice.js'
+import ListenButton from '../components/ListenButton.jsx'
+import Streak from '../components/Streak.jsx'
+import { listPracticeDays, recordPracticeDay } from '../lib/activityStore.js'
+import { dayKey, whenDue } from '../lib/days.js'
+import { buildChoices, buildRound, canUseChoices, isDue, nextReview, schedule } from '../lib/practice.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
-import { listWords, setBox } from '../lib/wordStore.js'
+import { listWords, setProgress } from '../lib/wordStore.js'
 
 const noun = (n) => (n === 1 ? 'word' : 'words')
 
+// A normal round holds the words due today. "Practise anyway" (extra) uses every word.
+const makeRound = (words, today, extra) => buildRound(extra ? words : words.filter((w) => isDue(w, today)))
+
 export default function PracticePage() {
   usePageTitle('Practice')
-  // The round is built once, so box changes during it do not reorder the cards.
+  // The day is fixed while the page is open, so a round that runs past midnight stays one round.
+  const [today] = useState(() => dayKey())
+  const [extra, setExtra] = useState(false)
+  // The round is built once, so level changes during it do not reorder the cards.
   const [pool, setPool] = useState(listWords)
-  const [round, setRound] = useState(() => buildRound(pool))
+  const [round, setRound] = useState(() => makeRound(pool, today, false))
   const [mode, setMode] = useState('cards') // cards | choice
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [answers, setAnswers] = useState([])
+  const [practiceDays, setPracticeDays] = useState(listPracticeDays)
 
   const finished = round.length > 0 && index >= round.length
   const card = round[index]
@@ -27,7 +38,7 @@ export default function PracticePage() {
   )
 
   function record(knew) {
-    setBox(card.id, nextBox(card.box, knew))
+    setProgress(card.id, schedule(card, knew, today))
     setAnswers((prev) => [...prev, { word: card, knew }])
   }
 
@@ -42,14 +53,22 @@ export default function PracticePage() {
     next()
   }
 
-  function restart() {
+  function restart(useAll = extra) {
     const words = listWords()
+    setExtra(useAll)
     setPool(words)
-    setRound(buildRound(words))
+    setRound(makeRound(words, today, useAll))
     setIndex(0)
     setFlipped(false)
     setAnswers([])
   }
+
+  // A finished round counts for the streak.
+  useEffect(() => {
+    if (!finished) return
+    recordPracticeDay(today)
+    setPracticeDays(listPracticeDays())
+  }, [finished, today])
 
   function changeMode(nextMode) {
     if (nextMode === mode) return
@@ -76,7 +95,7 @@ export default function PracticePage() {
     return () => document.removeEventListener('keydown', onKeyDown)
   })
 
-  if (round.length === 0) {
+  if (pool.length === 0) {
     return (
       <main className="page narrow-page">
         <h1>Practice</h1>
@@ -86,6 +105,33 @@ export default function PracticePage() {
           linkTo="/"
           linkLabel="Explain something"
         />
+      </main>
+    )
+  }
+
+  if (round.length === 0) {
+    const upcoming = nextReview(pool, today)
+    return (
+      <main className="page narrow-page">
+        <h1>Practice</h1>
+        <section className="card all-done" aria-labelledby="all-done">
+          <h2 id="all-done">Nothing to review today</h2>
+          <p className="soft">
+            {upcoming
+              ? `Next review: ${whenDue(upcoming.day, today)}, ${upcoming.count} ${noun(upcoming.count)}.`
+              : 'Your words come back here on the day they are due.'}{' '}
+            Each word comes back later every time you know it.
+          </p>
+          <div className="page-actions">
+            <button type="button" className="btn btn-primary" onClick={() => restart(true)}>
+              Practise anyway
+            </button>
+            <Link className="btn btn-outline" to="/">
+              Explain something new
+            </Link>
+          </div>
+        </section>
+        <Streak days={practiceDays} today={today} />
       </main>
     )
   }
@@ -112,10 +158,12 @@ export default function PracticePage() {
           </div>
           <p>
             {forgotten.length === 0
-              ? 'Every word was one you knew.'
-              : `${forgotten.length} ${noun(forgotten.length)} will come back sooner.`}
+              ? 'Every word was one you knew. They come back in a few days.'
+              : `${forgotten.length} ${noun(forgotten.length)} to practise again today. The words you knew come back later.`}
           </p>
         </section>
+
+        <Streak days={practiceDays} today={today} />
 
         <section className="stack-xs" aria-labelledby="review">
           {forgotten.length === 0 ? (
@@ -134,7 +182,7 @@ export default function PracticePage() {
         </section>
 
         <div className="page-actions">
-          <button type="button" className="btn btn-primary" onClick={restart}>
+          <button type="button" className="btn btn-primary" onClick={() => restart()}>
             Practise again
           </button>
           <Link className="btn btn-outline" to="/words">
@@ -176,6 +224,7 @@ export default function PracticePage() {
             Save at least 4 words to use multiple choice.
           </p>
         )}
+        {extra && <p className="soft">Extra practice: these words are not due yet.</p>}
         <div className="progress-row">
           <span className="progress-label">
             Card {index + 1} of {round.length}
@@ -202,22 +251,26 @@ export default function PracticePage() {
         </>
       ) : (
         <>
-      {flipped ? (
-        <section className="flashcard flashcard-back" aria-label="Flashcard">
-          <span className="flashcard-word">{card.word}</span>
-          <p className="flashcard-meaning">{card.meaning}</p>
-          <p className="flashcard-sentence">{card.sentence}</p>
-        </section>
-      ) : (
-        <button
-          type="button"
-          className="flashcard flashcard-front"
-          aria-label={`Show meaning of ${card.word}`}
-          onClick={() => setFlipped(true)}
-        >
-          <span className="flashcard-word">{card.word}</span>
-        </button>
-      )}
+          {/* The Listen button sits on the card's corner, beside it in the page, not inside the card button. */}
+          <div className="flashcard-wrap">
+            {flipped ? (
+              <section className="flashcard flashcard-back" aria-label="Flashcard">
+                <span className="flashcard-word">{card.word}</span>
+                <p className="flashcard-meaning">{card.meaning}</p>
+                <p className="flashcard-sentence">{card.sentence}</p>
+              </section>
+            ) : (
+              <button
+                type="button"
+                className="flashcard flashcard-front"
+                aria-label={`Show meaning of ${card.word}`}
+                onClick={() => setFlipped(true)}
+              >
+                <span className="flashcard-word">{card.word}</span>
+              </button>
+            )}
+            <ListenButton text={card.word} className="flashcard-listen" />
+          </div>
 
       <div className="answer-row">
         <button type="button" className="btn btn-answer btn-forgot" disabled={!flipped} onClick={() => answer(false)}>

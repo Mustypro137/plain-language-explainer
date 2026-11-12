@@ -65,6 +65,45 @@ test('busy passes on the wait time and the limit', async () => {
   expect(await explainText('x')).toEqual({ ok: false, error: 'busy', retryAfter: 8, limit: 'minute' })
 })
 
+describe("the firewall's limit for one visitor", () => {
+  function stubFirewall(retryAfter) {
+    const headers = new Headers(retryAfter === undefined ? {} : { 'retry-after': retryAfter })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        status: 429,
+        ok: false,
+        headers,
+        json: async () => {
+          throw new Error('not our JSON')
+        },
+      }),
+    )
+  }
+
+  test('a 429 without our body is the visitor limit, with the wait from Retry-After', async () => {
+    stubFirewall('42')
+    expect(await explainText('x')).toEqual({ ok: false, error: 'busy', retryAfter: 42, limit: 'visitor' })
+  })
+
+  test('without Retry-After the wait is one minute', async () => {
+    stubFirewall()
+    expect(await explainText('x')).toEqual({ ok: false, error: 'busy', retryAfter: 60, limit: 'visitor' })
+  })
+
+  test('a very long or broken Retry-After is kept sensible', async () => {
+    stubFirewall('86400')
+    expect((await explainText('x')).retryAfter).toBe(600)
+    stubFirewall('soon')
+    expect((await explainText('x')).retryAfter).toBe(60)
+  })
+
+  test('a 429 with some other JSON body is still the visitor limit', async () => {
+    stubFetch(429, { message: 'Too Many Requests' })
+    expect(await explainText('x')).toEqual({ ok: false, error: 'busy', retryAfter: 60, limit: 'visitor' })
+  })
+})
+
 test('busy without a usable wait time stays plain busy', async () => {
   stubFetch(429, { error: 'busy', retryAfter: 'soon', limit: 'week' })
   expect(await explainText('x')).toEqual({ ok: false, error: 'busy' })

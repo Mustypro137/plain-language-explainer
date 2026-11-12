@@ -2,12 +2,12 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ToastProvider } from '../components/Toast.jsx'
-import { listWords, saveWord, setBox } from '../lib/wordStore.js'
+import { listWords, saveWord, setProgress } from '../lib/wordStore.js'
 import WordsPage from './WordsPage.jsx'
 
 function seed(word, box = 1) {
   const { word: saved } = saveWord({ word, meaning: `${word} means`, sentence: `${word} in a sentence` })
-  setBox(saved.id, box)
+  setProgress(saved.id, { box })
 }
 
 function setup() {
@@ -122,7 +122,7 @@ test('Export downloads the saved words', async () => {
 
 function seedTopic(word, topic, box = 1) {
   const { word: saved } = saveWord({ word, meaning: `${word} means`, sentence: `${word} in a sentence`, topic })
-  setBox(saved.id, box)
+  setProgress(saved.id, { box })
 }
 
 const topicButton = (name) => within(screen.getByRole('group', { name: 'Filter by topic' })).getByRole('button', { name })
@@ -190,4 +190,98 @@ test('deleting the last word of a topic goes back to All', async () => {
   await user.click(screen.getByRole('button', { name: 'Delete commit' }))
   expect(topicButton('All 1')).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByText('useState')).toBeInTheDocument()
+})
+
+describe('import and backup', () => {
+  const fileInput = () => document.querySelector('input[type="file"]')
+  const backupFile = (data, name = 'backup.json') =>
+    new File([typeof data === 'string' ? data : JSON.stringify(data)], name, { type: 'application/json' })
+  const backup = (words, history = []) => ({ app: 'plain-language-explainer', version: 2, exportedAt: 'x', words, history })
+  const fileWord = (word) => ({ id: `f-${word}`, word, meaning: `${word} means`, sentence: 's', savedAt: '2026-01-01T00:00:00Z', box: 1 })
+  const fileEntry = {
+    id: 'h1',
+    text: 'some error',
+    level: null,
+    savedAt: '2026-01-01T00:00:00Z',
+    result: { kind: 'docs', explanation: 'e', why: 'w', steps: [], example: '', words: [] },
+  }
+
+  test('Import is there even with no words saved', () => {
+    setup()
+    expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument()
+  })
+
+  test('the Import button opens the file picker', async () => {
+    const user = setup()
+    const click = vi.spyOn(fileInput(), 'click')
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+    expect(click).toHaveBeenCalled()
+  })
+
+  test('a backup file adds its words and History, and says how many', async () => {
+    seed('callback')
+    const user = setup()
+    await user.upload(fileInput(), backupFile(backup([fileWord('promise'), fileWord('callback')], [fileEntry])))
+    expect(await screen.findByText('promise')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Added 1 word and 1 explanation.')
+    expect(listWords().map((w) => w.word).sort()).toEqual(['callback', 'promise'])
+    expect(JSON.parse(localStorage.getItem('ple.history.v1')).map((h) => h.id)).toEqual(['h1'])
+  })
+
+  test('a file with nothing new says so', async () => {
+    seed('callback')
+    const user = setup()
+    await user.upload(fileInput(), backupFile(backup([fileWord('callback')])))
+    expect(await screen.findByRole('status')).toHaveTextContent('Nothing new in this file')
+  })
+
+  test('a file that is not a backup changes nothing and says so', async () => {
+    const user = setup()
+    await user.upload(fileInput(), backupFile('{"hello": 1}'))
+    expect(await screen.findByRole('status')).toHaveTextContent('This file is not a Plain-Language Explainer backup.')
+    expect(listWords()).toEqual([])
+  })
+
+  test('Export downloads the words and the History together', async () => {
+    seed('callback')
+    localStorage.setItem('ple.history.v1', JSON.stringify([fileEntry]))
+    let blob
+    URL.createObjectURL = vi.fn((b) => {
+      blob = b
+      return 'blob:fake'
+    })
+    URL.revokeObjectURL = vi.fn()
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: /Export/ }))
+    const saved = JSON.parse(await blob.text())
+    expect(saved.version).toBe(2)
+    expect(saved.words.map((w) => w.word)).toEqual(['callback'])
+    expect(saved.history.map((h) => h.id)).toEqual(['h1'])
+  })
+})
+
+describe('review days and the streak', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 0, 10, 12))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  test('each word says when it comes back', () => {
+    seed('fresh')
+    const { word } = saveWord({ word: 'later', meaning: 'm', sentence: 's' })
+    setProgress(word.id, { box: 2, interval: 3, due: '2026-01-13' })
+    setup()
+    expect(within(screen.getByText('fresh').closest('li')).getByText('Review today')).toBeInTheDocument()
+    expect(within(screen.getByText('later').closest('li')).getByText('Review in 3 days')).toBeInTheDocument()
+  })
+
+  test('the streak shows with the words', () => {
+    seed('callback')
+    localStorage.setItem('ple.practice-days.v1', JSON.stringify(['2026-01-09']))
+    setup()
+    expect(screen.getByRole('heading', { level: 2, name: '1-day streak' })).toBeInTheDocument()
+    expect(screen.getByText('One round today makes it longer.')).toBeInTheDocument()
+  })
 })

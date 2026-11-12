@@ -1,4 +1,4 @@
-import { deleteWord, hasWord, listWords, restoreWord, saveWord, setBox } from './wordStore.js'
+import { WORDS_CHANGED, deleteWord, hasWord, importWords, listWords, restoreWord, saveWord, setProgress } from './wordStore.js'
 
 const entry = (word) => ({ word, meaning: 'm', sentence: 's' })
 
@@ -45,7 +45,7 @@ test('deleteWord returns the word and its place, and restoreWord puts it back th
   const c = saveWord(entry('c')).word
   const b = saveWord(entry('b')).word
   saveWord(entry('a'))
-  setBox(b.id, 3)
+  setProgress(b.id, { box: 3 })
   const removed = deleteWord(b.id)
   expect(removed).toEqual({ word: { ...b, box: 3 }, index: 1 })
   expect(listWords().map((w) => w.word)).toEqual(['a', 'c'])
@@ -76,10 +76,86 @@ test('restoreWord fits the word in when the list got shorter', () => {
   expect(listWords().map((w) => w.word)).toEqual(['b'])
 })
 
-test('setBox changes the box and survives a reload', () => {
+test('setProgress changes the box and survives a reload', () => {
   const { word } = saveWord(entry('a'))
-  setBox(word.id, 3)
+  setProgress(word.id, { box: 3 })
   expect(listWords()[0].box).toBe(3)
+})
+
+test('setProgress keeps the gap and the due day', () => {
+  const { word } = saveWord(entry('a'))
+  saveWord(entry('b'))
+  setProgress(word.id, { box: 2, interval: 3, due: '2026-02-01' })
+  expect(listWords().find((w) => w.word === 'a')).toMatchObject({ box: 2, interval: 3, due: '2026-02-01' })
+  expect(listWords().find((w) => w.word === 'b')).toMatchObject({ box: 1, interval: undefined, due: undefined })
+})
+
+test('a broken due day or gap counts as missing, without rewriting the word', () => {
+  const raw = { id: 'o', word: 'old', meaning: 'm', sentence: 's', savedAt: '2026-01-01T00:00:00Z', box: 2 }
+  localStorage.setItem('ple.words.v1', JSON.stringify([{ ...raw, due: 'soon', interval: -1 }]))
+  expect(listWords()[0]).toMatchObject({ due: undefined, interval: undefined })
+  expect(JSON.parse(localStorage.getItem('ple.words.v1'))[0].due).toBe('soon')
+})
+
+describe('importWords', () => {
+  const backupWord = (word, over = {}) => ({
+    id: `id-${word}`,
+    word,
+    meaning: 'm',
+    sentence: 's',
+    savedAt: '2026-01-02T00:00:00Z',
+    box: 2,
+    ...over,
+  })
+
+  test('adds new words, newest first, with their level and review day', () => {
+    saveWord(entry('here'))
+    const r = importWords([
+      backupWord('old', { savedAt: '2025-01-01T00:00:00Z', interval: 3, due: '2026-01-05', topic: 'git' }),
+      backupWord('mid'),
+    ])
+    expect(r).toEqual({ ok: true, added: 2 })
+    expect(listWords().map((w) => w.word)).toEqual(['here', 'mid', 'old'])
+    expect(listWords()[2]).toMatchObject({ box: 2, interval: 3, due: '2026-01-05', topic: 'Git' })
+  })
+
+  test('keeps the saved copy of a word that is already here, in any letter case', () => {
+    const here = saveWord(entry('callback')).word
+    expect(importWords([backupWord('CALLBACK', { box: 3 })])).toEqual({ ok: true, added: 0 })
+    expect(listWords()).toHaveLength(1)
+    expect(listWords()[0].box).toBe(here.box)
+  })
+
+  test('skips broken entries and repeats inside the file', () => {
+    const r = importWords([null, { word: 'no id' }, backupWord('x', { box: 7 }), backupWord('a'), backupWord('A', { id: 'other' })])
+    expect(r).toEqual({ ok: true, added: 1 })
+    expect(listWords().map((w) => w.word)).toEqual(['a'])
+  })
+
+  test('drops fields it does not know and broken review days', () => {
+    importWords([backupWord('a', { extra: '<script>', due: 'soon', interval: -2 })])
+    const raw = JSON.parse(localStorage.getItem('ple.words.v1'))[0]
+    expect(raw).not.toHaveProperty('extra')
+    expect(raw).not.toHaveProperty('due')
+    expect(raw).not.toHaveProperty('interval')
+  })
+
+  test('reports a storage failure', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('full')
+    })
+    expect(importWords([backupWord('a')])).toEqual({ ok: false, added: 0 })
+  })
+})
+
+test('every change tells the page, so counts can update', () => {
+  const heard = vi.fn()
+  window.addEventListener(WORDS_CHANGED, heard)
+  const { word } = saveWord(entry('a'))
+  setProgress(word.id, { box: 2 })
+  deleteWord(word.id)
+  window.removeEventListener(WORDS_CHANGED, heard)
+  expect(heard).toHaveBeenCalledTimes(3)
 })
 
 test('returns an empty list when storage holds broken JSON', () => {

@@ -8,9 +8,9 @@ A web app for beginner developers who find technical English hard. Paste documen
 
 ## What it does
 
-- **Explain** – paste up to 3,000 characters and press Explain (or `Ctrl`/`⌘` + `Enter`). One AI call returns five parts. "What to try next" appears only for error messages. The hard words are up to five terms worth learning, never file names or names from your own code. Before the first answer, the right side shows what the five parts are, and three examples (a React error, an npm error, a docs paragraph) show a full answer written in advance, with no AI call. On a phone, the page scrolls to the answer when it arrives and focus moves to it. Copy the whole answer as plain text. "Not clear?" asks again for a simpler or a more detailed version (one more AI call each). If the free Groq limit is used up, the app says whether it is the per-minute or per-day limit and counts down until you can try again.
-- **My Words** – the words you saved, with meaning, source sentence, learning level and topic (the AI picks one of: JavaScript, React, CSS, HTML, Node and npm, Git, Web and HTTP, General). See how many words are new, learning and known, filter by topic, search, delete (with Undo), and export everything as a JSON file.
-- **Practice** – flashcards from your saved words, up to ten per round, lowest level first. Space flips the card, `1` means "I forgot", `2` means "I knew it". Or switch to multiple choice (with 4 or more saved words): pick the right meaning of four, with keys `1` to `4`. A results screen lists the words to review.
+- **Explain** – paste up to 3,000 characters and press Explain (or `Ctrl`/`⌘` + `Enter`). One AI call returns five parts. "What to try next" appears only for error messages. The hard words are up to five terms worth learning, never file names or names from your own code. Before the first answer, the right side shows what the five parts are, and three examples (a React error, an npm error, a docs paragraph) show a full answer written in advance, with no AI call. On a phone, the page scrolls to the answer when it arrives and focus moves to it. The hard words are marked in your own text: tap one to see its meaning, hear it, and save it. If you explain the same text at the same level again, the answer comes from History without a new AI call ("Ask the AI again" gets a fresh one). Copy the whole answer as plain text. "Not clear?" asks again for a simpler or a more detailed version (one more AI call each). If the free Groq limit is used up, the app says whether it is the per-minute or per-day limit and counts down until you can try again.
+- **My Words** – the words you saved, with meaning, source sentence, learning level and topic (the AI picks one of: JavaScript, React, CSS, HTML, Node and npm, Git, Web and HTTP, General). See how many words are new, learning and known, filter by topic, search, delete (with Undo), and hear each word read aloud (the browser's own speech). Each word says when it comes back for review. A streak card shows how many days in a row you finished a practice round, with the last seven days. **Export** saves your words and History as one backup file; **Import** reads it back in another browser, adding only what is new (it also reads the old words-only export).
+- **Practice** – a round holds the words due today, up to ten, lowest level first. Each "I knew it" in a row brings a word back later (1, 3, 7, 16, then 35 days); "I forgot" brings it back today. The Practice link shows how many words are due. With nothing due, the page says when the next review is and offers "Practise anyway". Flashcards from your saved words: Space flips the card, `1` means "I forgot", `2` means "I knew it". Or switch to multiple choice (with 4 or more saved words): pick the right meaning of four, with keys `1` to `4`. A results screen lists the words to review.
 - **History** – the last 20 explanations, newest first. Open one to read it again without a new AI call, delete one, or clear them all. Each delete can be undone from the message at the bottom of the screen.
 - **Dark mode** – follows your device's light or dark setting. The sun/moon button in the top bar switches it, and the choice is remembered in this browser.
 
@@ -22,7 +22,20 @@ No login, no database, no analytics. Saved words and History stay in your own br
 - Plain CSS with CSS variables
 - One Vercel serverless function, `/api/explain`, that holds the Groq API key and checks the AI's answer
 - Groq API on the Free plan, called with `fetch`
+- A Vercel Firewall rate-limit rule on `/api/explain`, so one visitor cannot use up the shared free AI limit (set up in the dashboard, see below)
 - Vitest and Testing Library
+
+## The firewall rule for `/api/explain`
+
+The free Groq limit is shared by every visitor, so the project has one Vercel Firewall rule. It lives in the Vercel dashboard, not in this repo:
+
+1. Vercel dashboard → this project → **Firewall** → **Configure** → **New Rule**.
+2. Name: `Limit explain requests`.
+3. **If**: `Request Path` · `Equals` · `/api/explain`.
+4. **Then**: **Rate Limit**, fixed window, **60 seconds**, **10 requests**, counted by **IP Address**. Action: **Too Many Requests (429)**.
+5. Save, then **Review Changes** → **Publish**.
+
+When a visitor goes over it, the firewall answers 429 without the app's JSON body. `src/lib/explainText.js` tells that apart from the AI's own limit and the Explain page shows "You have asked many times in a short time" with a countdown (from `Retry-After` when sent, otherwise one minute).
 
 ## Run it locally
 

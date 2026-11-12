@@ -1,8 +1,10 @@
 import { Link, NavLink } from 'react-router-dom'
+import { useDueCount } from '../lib/useDueCount.js'
 import { APP_NAME } from '../lib/usePageTitle.js'
 import ThemeToggle from './ThemeToggle.jsx'
 
 export default function Header() {
+  const due = useDueCount()
   return (
     <header className="site-header">
       <div className="site-header-inner">
@@ -17,7 +19,14 @@ export default function Header() {
             Explain
           </NavLink>
           <NavLink to="/words">My Words</NavLink>
-          <NavLink to="/practice">Practice</NavLink>
+          <NavLink to="/practice" aria-label={due > 0 ? `Practice, ${due} due` : undefined}>
+            Practice
+            {due > 0 && (
+              <span className="nav-count" aria-hidden="true">
+                {due}
+              </span>
+            )}
+          </NavLink>
           <NavLink to="/history">History</NavLink>
         </nav>
         <ThemeToggle />

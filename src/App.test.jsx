@@ -1,6 +1,7 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App.jsx'
+import { saveWord } from './lib/wordStore.js'
 
 function renderAt(path) {
   return render(
@@ -53,6 +54,42 @@ test('the app name in the top bar links to the Explain page', () => {
     'href',
     '/',
   )
+})
+
+describe('due words on the Practice link', () => {
+  const word = (id, due) => ({ id, word: id, meaning: 'm', sentence: 's', savedAt: '2026-01-01T00:00:00Z', box: 1, due })
+  const practiceLink = () => within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: /^Practice/ })
+
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 0, 10, 12))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    localStorage.clear()
+  })
+
+  test('shows how many words are due today', () => {
+    localStorage.setItem('ple.words.v1', JSON.stringify([word('a', '2026-01-09'), word('b', undefined), word('c', '2026-01-11')]))
+    renderAt('/')
+    expect(practiceLink()).toHaveAccessibleName('Practice, 2 due')
+  })
+
+  test('shows no count when nothing is due', () => {
+    localStorage.setItem('ple.words.v1', JSON.stringify([word('a', '2026-01-11')]))
+    renderAt('/')
+    expect(practiceLink()).toHaveAccessibleName('Practice')
+  })
+
+  test('updates at once when a word is saved', async () => {
+    renderAt('/')
+    expect(practiceLink()).toHaveAccessibleName('Practice')
+    act(() => {
+      saveWord({ word: 'callback', meaning: 'm', sentence: 's' })
+    })
+    expect(practiceLink()).toHaveAccessibleName('Practice, 1 due')
+  })
 })
 
 test('the top bar has the light/dark switch', () => {

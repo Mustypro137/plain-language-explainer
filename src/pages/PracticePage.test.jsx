@@ -148,7 +148,7 @@ test('says Nothing to review when every word was known', async () => {
   expect(screen.getByText('Nothing to review')).toBeInTheDocument()
 })
 
-test('Practise again starts a new round', async () => {
+test('Practise again brings back only the words forgotten today', async () => {
   two()
   const { user } = setup()
   await user.keyboard(' ')
@@ -156,8 +156,8 @@ test('Practise again starts a new round', async () => {
   await user.keyboard(' ')
   await user.keyboard('1')
   await user.click(screen.getByRole('button', { name: 'Practise again' }))
-  expect(screen.getByText('Card 1 of 2')).toBeInTheDocument()
-  // alpha moved up to box 2, so the lowest box (beta) now comes first
+  // alpha was known, so it is due tomorrow; beta was forgotten, so it is due again today
+  expect(screen.getByText('Card 1 of 1')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^Show meaning of / })).toHaveTextContent('beta')
 })
 
@@ -274,7 +274,9 @@ test('a full multiple-choice round ends on the results screen', async () => {
     await user.click(screen.getByRole('button', { name: 'Next' }))
   }
   expect(screen.getByRole('heading', { level: 1, name: 'You knew 4 of 4 words' })).toBeInTheDocument()
+  // Every word was known, so none is due: Practise anyway starts a round in the same mode.
   await user.click(screen.getByRole('button', { name: 'Practise again' }))
+  await user.click(screen.getByRole('button', { name: 'Practise anyway' }))
   expect(screen.getByRole('region', { name: 'Question' })).toBeInTheDocument()
 })
 
@@ -287,14 +289,75 @@ test('flashcard keys do nothing in multiple-choice mode', async () => {
   expect(boxOf('alpha')).toBe(1)
 })
 
-test('switching mode starts a new round', async () => {
+test('switching mode starts a new round with the words still due', async () => {
   four()
   const { user } = setup()
   await user.keyboard(' ')
   await user.keyboard('2')
   expect(screen.getByText('Card 2 of 4')).toBeInTheDocument()
   await chooseMode(user)
-  expect(screen.getByText('Card 1 of 4')).toBeInTheDocument()
+  expect(screen.getByText('Card 1 of 3')).toBeInTheDocument()
   await user.click(modeButton('Flashcards'))
   expect(screen.getByRole('button', { name: /^Show meaning of / })).toBeInTheDocument()
+})
+
+describe('reviews on the day they are due', () => {
+  // A fixed "today" so the due days in the tests are stable.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 0, 10, 12))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  const at = (word, box, due, interval) => ({ ...mk(word, box, '2026-01-01T00:00:00Z'), due, interval })
+  const stored = (id) => JSON.parse(localStorage.getItem('ple.words.v1')).find((w) => w.id === id)
+
+  test('a round holds only the words due today or earlier', () => {
+    put([at('late', 1, '2026-01-09', 1), at('now', 1, '2026-01-10', 1), at('later', 1, '2026-01-12', 3)])
+    setup()
+    expect(screen.getByText('Card 1 of 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Show meaning of / })).toHaveTextContent('late')
+  })
+
+  test('"I knew it" schedules the word further out; "I forgot" makes it due today', async () => {
+    put([at('alpha', 2, '2026-01-10', 3), at('beta', 3, '2026-01-10', 16)])
+    const { user } = setup()
+    await user.keyboard(' ')
+    await user.keyboard('2')
+    expect(stored('alpha')).toMatchObject({ box: 3, interval: 7, due: '2026-01-17' })
+    await user.keyboard(' ')
+    await user.keyboard('1')
+    expect(stored('beta')).toMatchObject({ box: 1, interval: 0, due: '2026-01-10' })
+  })
+
+  test('with nothing due it says when the next review is, and offers extra practice', async () => {
+    put([at('alpha', 2, '2026-01-11', 1), at('beta', 2, '2026-01-11', 1), at('gamma', 3, '2026-01-20', 7)])
+    const { user } = setup()
+    expect(screen.getByRole('heading', { level: 2, name: 'Nothing to review today' })).toBeInTheDocument()
+    expect(screen.getByText(/^Next review: tomorrow, 2 words\./)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Practise anyway' }))
+    expect(screen.getByText('Card 1 of 3')).toBeInTheDocument()
+    expect(screen.getByText('Extra practice: these words are not due yet.')).toBeInTheDocument()
+  })
+
+  test('a finished round counts for the streak, which shows on the results', async () => {
+    localStorage.setItem('ple.practice-days.v1', JSON.stringify(['2026-01-09', '2026-01-08']))
+    put([at('alpha', 1, '2026-01-10', 0)])
+    const { user } = setup()
+    await user.keyboard(' ')
+    await user.keyboard('2')
+    expect(JSON.parse(localStorage.getItem('ple.practice-days.v1'))).toEqual(['2026-01-10', '2026-01-09', '2026-01-08'])
+    expect(screen.getByRole('heading', { level: 2, name: '3-day streak' })).toBeInTheDocument()
+    expect(screen.getByText('You practised today.')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Practised on 3 of the last 7 days' })).toBeInTheDocument()
+  })
+
+  test('leaving a round half done does not count for the streak', async () => {
+    put([at('alpha', 1, '2026-01-10', 0), at('beta', 1, '2026-01-10', 0)])
+    const { user, unmount } = setup()
+    await user.keyboard(' ')
+    await user.keyboard('2')
+    unmount()
+    expect(localStorage.getItem('ple.practice-days.v1')).toBeNull()
+  })
 })

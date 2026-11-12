@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import ListenButton from './ListenButton.jsx'
 
 // One multiple-choice question. Give it a new `key` for each card so the pick resets.
 export default function ChoiceQuestion({ card, choices, onAnswer, onNext }) {
@@ -39,7 +40,10 @@ export default function ChoiceQuestion({ card, choices, onAnswer, onNext }) {
   return (
     <>
       <section className="choice-card" aria-label="Question">
-        <span className="flashcard-word">{card.word}</span>
+        <div className="word-name-row">
+          <span className="flashcard-word">{card.word}</span>
+          <ListenButton text={card.word} />
+        </div>
         <p className="choice-prompt">Which meaning is right?</p>
       </section>
 

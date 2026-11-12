@@ -22,6 +22,9 @@ function isResult(r) {
   )
 }
 
+// "simpler" or "detail" for "Not clear?" answers. Missing (entries saved before levels) means normal.
+const LEVELS = [undefined, null, 'simpler', 'detail']
+
 function isItem(h) {
   return (
     h !== null &&
@@ -30,9 +33,12 @@ function isItem(h) {
     isText(h.text) &&
     isText(h.savedAt) &&
     !Number.isNaN(Date.parse(h.savedAt)) &&
+    LEVELS.includes(h.level) &&
     isResult(h.result)
   )
 }
+
+export const levelOf = (item) => item.level ?? null
 
 function read() {
   try {
@@ -60,10 +66,16 @@ export function getHistoryItem(id) {
   return read().find((h) => h.id === id)
 }
 
-export function addHistory({ text, result }) {
+// The kept answer for exactly this text at this level, so it can be shown without asking the AI.
+export function findHistory(text, level = null) {
+  return read().find((h) => h.text === text && levelOf(h) === level)
+}
+
+export function addHistory({ text, result, level = null }) {
   const item = {
     id: crypto.randomUUID(),
     text,
+    level,
     result,
     savedAt: new Date().toISOString(),
   }
@@ -82,6 +94,13 @@ export function deleteHistoryItem(id) {
 export function clearHistory() {
   const items = read()
   return write([]) ? items : []
+}
+
+// Adds the History from a backup file, with the same rules as restoreHistory.
+export function importHistory(list) {
+  const before = new Set(read().map((h) => h.id))
+  if (!restoreHistory(Array.isArray(list) ? list : [])) return { ok: false, added: 0 }
+  return { ok: true, added: read().filter((h) => !before.has(h.id)).length }
 }
 
 // Merges removed entries back, newest first. A text explained again meanwhile keeps its newer entry.
