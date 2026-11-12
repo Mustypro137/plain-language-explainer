@@ -121,6 +121,16 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] Copy explanation includes a "Line by line" section.
 - [ ] On a phone each row stacks: number, your part, then the plain version.
 
+## Design step 3 (My Words sky)
+
+- [ ] My Words has a List | Sky switch; the choice is still there after a reload.
+- [ ] Sky: one group per topic in its colour, a star per word. Known words are big and full, new ones small; due words have a dashed ring. No two labels overlap, on a phone too, and nothing sticks out of the sky.
+- [ ] Tap a star: its panel shows the meaning, translation, source sentence, "How bright", next review and note, and comes into view. Edit works in the panel; Close puts focus back on the star.
+- [ ] With the keyboard, Tab reaches every star, and a screen reader says "word, level" and "due today" when due.
+- [ ] Search and the topic buttons filter the sky too.
+- [ ] Save a word on the Explain page: a small star flies to My Words in the top bar and the count goes up by one. With "reduce motion" on, there is no flight.
+- [ ] The top bar shows "★ N" beside My Words on a tablet or desktop; on a phone the links still fit on one line.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.

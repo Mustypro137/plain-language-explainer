@@ -1930,6 +1930,287 @@ select.search-box {
   display: none;
 }
 
+/* My Words: List | Sky */
+.view-switch {
+  align-self: flex-start;
+}
+
+.view-switch .btn {
+  gap: 6px;
+}
+
+.sky-layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.sky {
+  flex: 999 1 460px;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px 28px;
+  padding: 20px 20px 16px;
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--sky);
+}
+
+.sky-cluster {
+  --topic: var(--topic-7);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 100%;
+}
+
+.topic-0 { --topic: var(--topic-0); }
+.topic-1 { --topic: var(--topic-1); }
+.topic-2 { --topic: var(--topic-2); }
+.topic-3 { --topic: var(--topic-3); }
+.topic-4 { --topic: var(--topic-4); }
+.topic-5 { --topic: var(--topic-5); }
+.topic-6 { --topic: var(--topic-6); }
+.topic-7 { --topic: var(--topic-7); }
+
+.sky-topic {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: var(--topic);
+}
+
+.sky-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--soft-ink);
+}
+
+.sky-field {
+  position: relative;
+  max-width: 100%;
+}
+
+.sky-lines {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.sky-lines polyline {
+  fill: none;
+  stroke: var(--topic);
+  stroke-opacity: 0.35;
+  stroke-width: 1.5;
+}
+
+/* A star: a dot centred on its point, its word under it */
+.star {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 104px;
+  padding: 2px 4px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  transform: translate(-50%, -11px);
+}
+
+.star:hover {
+  background: var(--panel-2);
+}
+
+.star-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+.star-label {
+  overflow-wrap: anywhere;
+}
+
+.star-dot {
+  display: block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--topic, var(--soft-ink));
+  transition: transform var(--t-state) var(--ease);
+}
+
+.star-1 .star-dot {
+  transform: scale(0.55);
+  opacity: 0.75;
+}
+
+.star-2 .star-dot {
+  transform: scale(0.75);
+  opacity: 0.88;
+}
+
+:root[data-theme='dark'] .star-3 .star-dot {
+  box-shadow: 0 0 14px var(--topic);
+}
+
+/* Fading: due for review today. A dashed ring around the star. */
+.star-due .star-dot {
+  outline: 2px dashed var(--star);
+  outline-offset: 3px;
+}
+
+.star-due .star-label {
+  color: var(--soft-ink);
+}
+
+.sky-legend {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 8px 0 0;
+  padding: 12px 0 0;
+  list-style: none;
+  border-top: var(--border);
+  font-size: 14px;
+  color: var(--soft-ink);
+}
+
+.sky-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sky-legend .star-dot {
+  --topic: var(--accent);
+}
+
+.legend-1 {
+  transform: scale(0.55);
+}
+
+.legend-2 {
+  transform: scale(0.75);
+}
+
+.legend-due {
+  transform: scale(0.55);
+  outline: 2px dashed var(--star);
+  outline-offset: 3px;
+}
+
+/* The chosen word, beside the sky (under it on a phone) */
+.word-detail {
+  flex: 1 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: rise-in var(--t-enter) var(--ease);
+}
+
+.word-detail p {
+  margin: 0;
+}
+
+.word-detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.word-detail-close {
+  width: 40px;
+  padding: 0;
+}
+
+.word-detail-title {
+  font-size: 28px;
+  overflow-wrap: anywhere;
+}
+
+.brightness {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.brightness-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--soft-ink);
+}
+
+.brightness-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.brightness-bar span {
+  flex: 1 1 0;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line-strong);
+}
+
+.brightness-bar .on {
+  background: var(--star);
+}
+
+.brightness-when {
+  font-size: 15px;
+}
+
+/* My Words count in the top bar: how many stars are in your sky */
+.nav-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--star-text);
+}
+
+@media (max-width: 639px) {
+  .nav-stars {
+    display: none;
+  }
+}
+
+/* The star that flies from Save to My Words */
+@media (max-width: 479px) {
+  .sky {
+    padding: 16px 12px 12px;
+  }
+}
+
+.fly-star {
+  position: fixed;
+  z-index: 60;
+  width: 16px;
+  height: 16px;
+  background: var(--star);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  pointer-events: none;
+}
+
 /* Motion: 120ms press, 200ms state, 320ms enter, 600ms star moments; one easing; only
    opacity and position move. */
 @keyframes rise-in {

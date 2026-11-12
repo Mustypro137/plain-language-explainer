@@ -28,6 +28,17 @@
   --code-bg: #0e1525;
   --code-text: #f3f1ff;
 
+  /* Star colours per topic, in the order of shared/topics.js */
+  --topic-0: #b45309; /* JavaScript */
+  --topic-1: #0f766e; /* React */
+  --topic-2: #be185d; /* CSS */
+  --topic-3: #c2410c; /* HTML */
+  --topic-4: #7c3aed; /* Node and npm */
+  --topic-5: #4d7c0f; /* Git */
+  --topic-6: #1d4ed8; /* Web and HTTP */
+  --topic-7: #475569; /* General */
+  --sky: #ffffff;
+
   --font-heading: 'Space Grotesk', system-ui, sans-serif;
   --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -76,6 +87,16 @@
   --alert-soft: #3a1830;
   --code-bg: #0a0e26;
   --code-text: #f3f1ff;
+
+  --topic-0: #ffd166;
+  --topic-1: #5eead4;
+  --topic-2: #ff8fb1;
+  --topic-3: #fdba74;
+  --topic-4: #c4b5fd;
+  --topic-5: #bef264;
+  --topic-6: #93c5fd;
+  --topic-7: #cbd5e1;
+  --sky: #0b1028;
 
   --shadow-float: 0 8px 24px rgb(0 0 0 / 0.45);
 

@@ -392,3 +392,57 @@ describe('word detail', () => {
     expect(screen.getByRole('link', { name: 'Practise React (2)' })).toHaveAttribute('href', '/practice?topic=React')
   })
 })
+
+describe('the Sky view', () => {
+  const toSky = async (user) => user.click(screen.getByRole('button', { name: 'Sky' }))
+
+  test('shows the words as stars, and the choice is remembered', async () => {
+    seed('callback', 3)
+    seed('promise')
+    const user = setup()
+    expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true')
+    await toSky(user)
+    expect(screen.getByRole('button', { name: 'Sky' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^callback, known/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete callback' })).not.toBeInTheDocument()
+    expect(localStorage.getItem('ple.words-view.v1')).toBe('sky')
+  })
+
+  test('a star opens its word, and Close puts focus back on the star', async () => {
+    saveWord({ word: 'callback', meaning: 'A function you pass.', sentence: 'Pass a callback.', note: 'Phone me back' })
+    const user = setup()
+    await toSky(user)
+    await user.click(screen.getByRole('button', { name: /^callback/ }))
+    const panel = screen.getByRole('complementary', { name: 'callback' })
+    expect(within(panel).getByText('A function you pass.')).toBeInTheDocument()
+    expect(within(panel).getByText('Phone me back')).toBeInTheDocument()
+    expect(within(panel).getByRole('img', { name: 'Level 1 of 3' })).toBeInTheDocument()
+    await user.click(within(panel).getByRole('button', { name: 'Close callback' }))
+    expect(screen.queryByRole('complementary', { name: 'callback' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^callback/ })).toHaveFocus()
+  })
+
+  test('Edit works inside the panel', async () => {
+    seed('callback')
+    const user = setup()
+    await toSky(user)
+    await user.click(screen.getByRole('button', { name: /^callback/ }))
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    const meaning = screen.getByLabelText('Meaning')
+    await user.clear(meaning)
+    await user.type(meaning, 'A function called later.')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(screen.getByRole('complementary', { name: 'callback' })).toHaveTextContent('A function called later.')
+    expect(screen.getByRole('button', { name: 'Edit' })).toHaveFocus()
+  })
+
+  test('the search and the topic filter apply to the sky too', async () => {
+    seed('callback')
+    seed('promise')
+    const user = setup()
+    await toSky(user)
+    await user.type(screen.getByLabelText('Search your words'), 'call')
+    expect(screen.getByRole('button', { name: /^callback/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^promise/ })).not.toBeInTheDocument()
+  })
+})

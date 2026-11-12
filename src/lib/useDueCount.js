@@ -25,3 +25,10 @@ function countDue() {
 export function useDueCount() {
   return useSyncExternalStore(subscribe, countDue)
 }
+
+const countWords = () => listWords().length
+
+// How many words are saved (the stars in the sky).
+export function useWordCount() {
+  return useSyncExternalStore(subscribe, countWords)
+}
