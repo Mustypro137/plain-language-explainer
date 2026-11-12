@@ -7,6 +7,7 @@ import HelpLine from '../components/HelpLine.jsx'
 import LevelSlider from '../components/LevelSlider.jsx'
 import LineByLine from '../components/LineByLine.jsx'
 import ListenButton from '../components/ListenButton.jsx'
+import WordChips from '../components/WordChips.jsx'
 import Loading from '../components/Loading.jsx'
 import MarkedText from '../components/MarkedText.jsx'
 import ResultCard from '../components/ResultCard.jsx'
@@ -482,46 +483,55 @@ export default function ExplainPage() {
             )}
             {result.example && (
               <ResultCard title="Practical example">
-                <pre className="code-block">{result.example}</pre>
+                {/* Folded: useful, but long, and not what most readers need first. */}
+                <details className="fold">
+                  <summary>Show the example</summary>
+                  <pre className="code-block">{result.example}</pre>
+                </details>
               </ResultCard>
             )}
             {result.words.length > 0 && (
               <ResultCard title="Hard words">
-                {/* With line by line, the words are already marked in the table above. */}
-                {!(result.lines?.length > 0) && (
+                {/* With line by line the words are already dotted in the table above, so here
+                    they are only a row of chips. Older answers keep the full list. */}
+                {result.lines?.length > 0 ? (
+                  <WordChips words={result.words} isSaved={(w) => saved.has(wordKey(w.word))} onSave={save} />
+                ) : (
+                  <>
                   <MarkedText
                     text={request.text}
                     words={result.words}
                     isSaved={(w) => saved.has(wordKey(w.word))}
                     onSave={save}
                   />
-                )}
-                <ul className="word-rows">
-                  {result.words.map((w) => {
-                    const isSaved = saved.has(wordKey(w.word))
-                    return (
-                      <li key={w.word} className="word-row">
-                        <div className="word-row-text">
-                          <div className="word-name-row">
-                            <span className={`word-name${isSaved ? ' word-name-saved' : ''}`}>{w.word}</span>
-                            <ListenButton text={w.word} />
+                  <ul className="word-rows">
+                    {result.words.map((w) => {
+                      const isSaved = saved.has(wordKey(w.word))
+                      return (
+                        <li key={w.word} className="word-row">
+                          <div className="word-row-text">
+                            <div className="word-name-row">
+                              <span className={`word-name${isSaved ? ' word-name-saved' : ''}`}>{w.word}</span>
+                              <ListenButton text={w.word} />
+                            </div>
+                            <p>{w.meaning}</p>
+                            <HelpLine help={w.help} field="meaning" />
                           </div>
-                          <p>{w.meaning}</p>
-                          <HelpLine help={w.help} field="meaning" />
-                        </div>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          disabled={isSaved}
-                          aria-label={`${isSaved ? 'Saved' : 'Save'} ${w.word}`}
-                          onClick={(e) => save(w, e.currentTarget)}
-                        >
-                          {isSaved ? 'Saved' : 'Save'}
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
+                          <button
+                            type="button"
+                            className="btn btn-outline"
+                            disabled={isSaved}
+                            aria-label={`${isSaved ? 'Saved' : 'Save'} ${w.word}`}
+                            onClick={(e) => save(w, e.currentTarget)}
+                          >
+                            {isSaved ? 'Saved' : 'Save'}
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  </>
+                )}
               </ResultCard>
             )}
             <FollowUp

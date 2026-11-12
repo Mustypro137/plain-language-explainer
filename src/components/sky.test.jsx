@@ -62,11 +62,13 @@ describe('WordSky', () => {
     word('callback', 'JavaScript', 1),
   ]
 
-  test('every word is a button that says its level and whether it is due', () => {
+  test('every word is a button that says its level, and fading only when practised and due again', () => {
     render(<WordSky words={words} today={today} selectedId={null} onSelect={() => {}} />)
     expect(screen.getByRole('button', { name: 'hook, known' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'prop, learning, due today' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'callback, new, due today' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'prop, learning, fading, due today' })).toBeInTheDocument()
+    // Never practised: due for a first round, but not fading.
+    expect(screen.getByRole('button', { name: 'callback, new' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'callback, new' })).not.toHaveClass('star-due')
     expect(screen.getByRole('region', { name: 'React, 2' })).toBeInTheDocument()
   })
 

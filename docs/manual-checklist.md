@@ -141,6 +141,14 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] An entry with a level, a language, questions or saved words lists them on one line (for example "Simpler · in Spanish · 1 question · 2 words saved").
 - [ ] Search History finds entries by their text or their explanation; with no match it says so.
 
+## Third audit fixes
+
+- [ ] A word saved but never practised shows in the Sky as a small "new" star with no dashed ring. After a round, a word that comes back today has the ring.
+- [ ] My Words shows one summary line (new, learning, known, and "fading" and "days in a row" only when there are some) instead of three tiles and a streak card.
+- [ ] An answer with line by line shows the hard words as chips: a tap opens the meaning with Listen and Save, and a saved word gets a small star. Older History entries still show the full list.
+- [ ] "Practical example" is folded: "Show the example" opens it.
+- [ ] The React error from the samples above no longer gives "hooks" or "render" as hard words.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.

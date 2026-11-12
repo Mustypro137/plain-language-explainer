@@ -520,8 +520,12 @@ describe('the examples', () => {
   test('words from an example can be saved', async () => {
     const user = setup()
     await user.click(example())
-    await user.click(screen.getByRole('button', { name: 'Save undefined' }))
+    // The example has line by line, so its hard words are chips: open one, then save it.
+    const chips = within(screen.getByRole('heading', { name: 'Hard words' }).closest('article'))
+    await user.click(chips.getByRole('button', { name: 'undefined' }))
+    await user.click(chips.getByRole('button', { name: 'Save undefined to My Words' }))
     expect(hasWord('undefined')).toBe(true)
+    expect(chips.getByRole('button', { name: 'undefined, saved' })).toBeInTheDocument()
   })
 
   test('Explain after an example asks the AI for real, and the example note goes', async () => {
@@ -782,7 +786,10 @@ describe('saved words point back to their explanation', () => {
   test('a word saved from an example has no source', async () => {
     const user = setup()
     await user.click(screen.getByRole('button', { name: SAMPLES[0].label }))
-    await user.click(screen.getByRole('button', { name: `Save ${SAMPLES[0].result.words[0].word}` }))
+    const word = SAMPLES[0].result.words[0].word
+    const chips = within(screen.getByRole('heading', { name: 'Hard words' }).closest('article'))
+    await user.click(chips.getByRole('button', { name: word }))
+    await user.click(chips.getByRole('button', { name: `Save ${word} to My Words` }))
     expect(listWords()[0].source).toBeUndefined()
   })
 })
