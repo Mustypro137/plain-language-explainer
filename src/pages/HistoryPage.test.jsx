@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ToastProvider } from '../components/Toast.jsx'
 import { listHistory } from '../lib/historyStore.js'
-import HistoryPage from './HistoryPage.jsx'
+import { saveWord } from '../lib/wordStore.js'
+import HistoryPage, { dayLabel, groupByDay } from './HistoryPage.jsx'
 
 const mk = (id, text, kind, savedAt) => ({
   id,
@@ -132,4 +133,54 @@ test('a very long first line is shortened in the button names', () => {
   )
   setup()
   expect(screen.getByRole('link', { name: `Open explanation of: ${'x'.repeat(60)}…` })).toBeInTheDocument()
+})
+
+describe('grouped by day', () => {
+  test('dayLabel says Today, Yesterday, the day, or the date with its year', () => {
+    expect(dayLabel('2026-11-12', '2026-11-12')).toBe('Today')
+    expect(dayLabel('2026-11-11', '2026-11-12')).toBe('Yesterday')
+    expect(dayLabel('2026-11-09', '2026-11-12')).toBe('Monday 9 November')
+    expect(dayLabel('2025-12-30', '2026-01-02')).toBe('30 December 2025')
+  })
+
+  test('groupByDay keeps the newest first, one group per day', () => {
+    const at = (id, iso) => ({ id, savedAt: iso })
+    const groups = groupByDay(
+      [at('c', '2026-11-12T15:00:00'), at('b', '2026-11-12T09:00:00'), at('a', '2026-11-10T09:00:00')],
+      '2026-11-12',
+    )
+    expect(groups.map((g) => [g.label, g.items.map((h) => h.id)])).toEqual([
+      ['Today', ['c', 'b']],
+      ['Tuesday 10 November', ['a']],
+    ])
+  })
+
+  test('the page shows a heading per day and the details of each entry', () => {
+    const now = new Date()
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    localStorage.setItem(
+      'ple.history.v1',
+      JSON.stringify([
+        { ...mk('new', 'today text', 'error', now.toISOString()), level: 'simpler', language: 'es', followUps: [{ question: 'q', answer: 'a' }] },
+        mk('old', 'older text', 'docs', yesterday.toISOString()),
+      ]),
+    )
+    saveWord({ word: 'callback', meaning: 'm', sentence: 's', source: 'new' })
+    setup()
+    expect(screen.getByRole('heading', { level: 2, name: 'Today' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Yesterday' })).toBeInTheDocument()
+    expect(screen.getByText('Simpler · in Spanish · 1 question · 1 word saved')).toBeInTheDocument()
+  })
+
+  test('search keeps only the entries that match, by text or explanation', async () => {
+    two()
+    const user = setup()
+    await user.type(screen.getByLabelText('Search History'), 'typeerror')
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    await user.clear(screen.getByLabelText('Search History'))
+    await user.type(screen.getByLabelText('Search History'), 'new in simple')
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    await user.type(screen.getByLabelText('Search History'), 'zzz')
+    expect(screen.getByText('Nothing in History matches your search.')).toBeInTheDocument()
+  })
 })

@@ -68,9 +68,20 @@ function PracticeSession({ topic }) {
   )
 
   function record(knew) {
-    setProgress(card.id, schedule(card, knew, today))
-    setAnswers((prev) => [...prev, { word: card, knew }])
+    const next = schedule(card, knew, today)
+    setProgress(card.id, next)
+    setAnswers((prev) => [...prev, { word: card, knew, due: next.due }])
   }
+
+  // Focus mode: while a round runs, the top bar goes away (see .site-header in base.css).
+  const inRound = round.length > 0 && !finished
+  useEffect(() => {
+    if (!inRound) return undefined
+    document.body.dataset.focus = 'practice'
+    return () => {
+      delete document.body.dataset.focus
+    }
+  }, [inRound])
 
   function next() {
     setIndex((i) => i + 1)
@@ -235,11 +246,26 @@ function PracticeSession({ topic }) {
     )
   }
 
+  const last = answers.at(-1)
+  const lastNote = !last
+    ? ''
+    : last.knew
+      ? `“${last.word.word}” is brighter now. Back ${whenDue(last.due, today)}.`
+      : `“${last.word.word}” comes back today.`
+  const right = answers.filter((a) => a.knew).length
+
   return (
-    <main className="page narrow-page">
+    <main className="page narrow-page practice-focus">
       <div className="stack-sm">
         <div className="page-head">
-          <h1>Practice</h1>
+          <div className="focus-title">
+            <Link className="btn btn-quiet focus-leave" to="/words" aria-label="Leave practice">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </Link>
+            <h1>Practice</h1>
+          </div>
           <div className="mode-switch" role="group" aria-label="Practice mode">
             <button
               type="button"
@@ -287,17 +313,26 @@ function PracticeSession({ topic }) {
           <span className="progress-label">
             Card {index + 1} of {round.length}
           </span>
+          {/* A star per card: gold when you knew it, dashed when it comes back today. */}
           <div
-            className="progress"
+            className="star-progress"
             role="progressbar"
             aria-label="Progress"
             aria-valuemin={0}
             aria-valuemax={round.length}
             aria-valuenow={index}
+            aria-valuetext={`${right} known, ${answers.length - right} to review, ${round.length - answers.length} to go`}
           >
-            <div className="progress-fill" style={{ width: `${(index / round.length) * 100}%` }} />
+            {round.map((w, i) => {
+              const a = answers[i]
+              const state = a ? (a.knew ? 'sp-right' : 'sp-again') : i === index ? 'sp-now' : 'sp-next'
+              return <span key={w.id} className={`sp ${state}${a && i === answers.length - 1 ? ' sp-just' : ''}`} />
+            })}
           </div>
         </div>
+        <p className="star-note" aria-live="polite">
+          {lastNote}
+        </p>
       </div>
 
       {mode === 'blank' ? (
