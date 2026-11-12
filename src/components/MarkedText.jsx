@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { markWords } from '../lib/markWords.js'
+import HelpLine from './HelpLine.jsx'
 import ListenButton from './ListenButton.jsx'
 
 // The user's own text with the hard words marked. A tap on one shows its meaning right
@@ -41,6 +42,7 @@ export default function MarkedText({ text, words, isSaved, onSave }) {
               <ListenButton text={current.word} />
             </div>
             <p>{current.meaning}</p>
+            <HelpLine help={current.help} field="meaning" />
             <button
               type="button"
               className="btn btn-outline"

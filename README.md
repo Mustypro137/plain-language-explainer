@@ -8,10 +8,10 @@ A web app for beginner developers who find technical English hard. Paste documen
 
 ## What it does
 
-- **Explain** – paste up to 3,000 characters and press Explain (or `Ctrl`/`⌘` + `Enter`). One AI call returns five parts. "What to try next" appears only for error messages. The hard words are up to five terms worth learning, never file names or names from your own code. Before the first answer, the right side shows what the five parts are, and three examples (a React error, an npm error, a docs paragraph) show a full answer written in advance, with no AI call. On a phone, the page scrolls to the answer when it arrives and focus moves to it. The hard words are marked in your own text: tap one to see its meaning, hear it, and save it. If you explain the same text at the same level again, the answer comes from History without a new AI call ("Ask the AI again" gets a fresh one). Copy the whole answer as plain text. "Not clear?" asks again for a simpler or a more detailed version (one more AI call each). If the free Groq limit is used up, the app says whether it is the per-minute or per-day limit and counts down until you can try again.
-- **My Words** – the words you saved, with meaning, source sentence, learning level and topic (the AI picks one of: JavaScript, React, CSS, HTML, Node and npm, Git, Web and HTTP, General). See how many words are new, learning and known, filter by topic, search, delete (with Undo), and hear each word read aloud (the browser's own speech). Each word says when it comes back for review. A streak card shows how many days in a row you finished a practice round, with the last seven days. **Export** saves your words and History as one backup file; **Import** reads it back in another browser, adding only what is new (it also reads the old words-only export).
-- **Practice** – a round holds the words due today, up to ten, lowest level first. Each "I knew it" in a row brings a word back later (1, 3, 7, 16, then 35 days); "I forgot" brings it back today. The Practice link shows how many words are due. With nothing due, the page says when the next review is and offers "Practise anyway". Flashcards from your saved words: Space flips the card, `1` means "I forgot", `2` means "I knew it". Or switch to multiple choice (with 4 or more saved words): pick the right meaning of four, with keys `1` to `4`. A results screen lists the words to review.
-- **History** – the last 20 explanations, newest first. Open one to read it again without a new AI call, delete one, or clear them all. Each delete can be undone from the message at the bottom of the screen.
+- **Explain** – paste up to 3,000 characters and press Explain (or `Ctrl`/`⌘` + `Enter`). One AI call returns five parts. "What to try next" appears only for error messages. The hard words are up to five terms worth learning, never file names or names from your own code. Before the first answer, the right side shows what the five parts are, and three examples (a React error, an npm error, a docs paragraph) show a full answer written in advance, with no AI call. On a phone, the page scrolls to the answer when it arrives and focus moves to it. The hard words are marked in your own text: tap one to see its meaning, hear it, and save it. If you explain the same text at the same level again, the answer comes from History without a new AI call ("Ask the AI again" gets a fresh one). Copy the whole answer as plain text. "Not clear?" asks again for a simpler or a more detailed version (one more AI call each). **Help in my language** (20 languages, remembered in this browser) adds a translation of the explanation, the "why" and each word's meaning in smaller text under the English, in the same AI call. **Ask about this** takes up to three questions about an answer (one AI call each); the answers are kept with the explanation in History. If the free Groq limit is used up, the app says whether it is the per-minute or per-day limit and counts down until you can try again.
+- **My Words** – the words you saved, with meaning, source sentence, learning level and topic (the AI picks one of: JavaScript, React, CSS, HTML, Node and npm, Git, Web and HTTP, General). See how many words are new, learning and known, filter by topic, search, delete (with Undo), and hear each word read aloud (the browser's own speech). **Add a word** by hand, and **Edit** a word's meaning, topic and your own note in place. A word saved from an explanation links back to it while History still has it. With a topic chosen, the Practise button practises only that topic. Each word says when it comes back for review. A streak card shows how many days in a row you finished a practice round, with the last seven days. **Export** saves your words and History as one backup file; **Import** reads it back in another browser, adding only what is new (it also reads the old words-only export).
+- **Practice** – a round holds the words due today, up to ten, lowest level first. Each "I knew it" in a row brings a word back later (1, 3, 7, 16, then 35 days); "I forgot" brings it back today. The Practice link shows how many words are due. With nothing due, the page says when the next review is and offers "Practise anyway". Flashcards from your saved words: Space flips the card, `1` means "I forgot", `2` means "I knew it". Or switch to multiple choice (with 4 or more saved words): pick the right meaning of four, with keys `1` to `4`. Or **Fill the blank**: the saved sentence with the word hidden and its meaning as the clue; type the word. `/practice?topic=React` practises every React word, due or not. A results screen lists the words to review.
+- **History** – the last 50 explanations, newest first. Open one to read it again without a new AI call, delete one, or clear them all. Each delete can be undone from the message at the bottom of the screen.
 - **Dark mode** – follows your device's light or dark setting. The sun/moon button in the top bar switches it, and the choice is remembered in this browser.
 
 No login, no database, no analytics. Saved words and History stay in your own browser (localStorage). Pasted text is sent to the AI to be explained; the app keeps it only in your browser's History, never on a server.
@@ -20,22 +20,22 @@ No login, no database, no analytics. Saved words and History stay in your own br
 
 - React with Vite, React Router
 - Plain CSS with CSS variables
-- One Vercel serverless function, `/api/explain`, that holds the Groq API key and checks the AI's answer
+- Two Vercel serverless functions, `/api/explain` and `/api/ask` (follow-up questions), that hold the Groq API key and check the AI's answer
 - Groq API on the Free plan, called with `fetch`
-- A Vercel Firewall rate-limit rule on `/api/explain`, so one visitor cannot use up the shared free AI limit (set up in the dashboard, see below)
+- A Vercel Firewall rate-limit rule on `/api/`, so one visitor cannot use up the shared free AI limit (set up in the dashboard, see below)
 - Vitest and Testing Library
 
-## The firewall rule for `/api/explain`
+## The firewall rule for `/api/`
 
 The free Groq limit is shared by every visitor, so the project has one Vercel Firewall rule. It lives in the Vercel dashboard, not in this repo:
 
 1. Vercel dashboard → this project → **Firewall** → **Configure** → **New Rule**.
 2. Name: `Limit explain requests`.
-3. **If**: `Request Path` · `Equals` · `/api/explain`.
+3. **If**: `Request Path` · `Starts with` · `/api/` (this covers both `/api/explain` and `/api/ask`).
 4. **Then**: **Rate Limit**, fixed window, **60 seconds**, **10 requests**, counted by **IP Address**. Action: **Too Many Requests (429)**.
 5. Save, then **Review Changes** → **Publish**.
 
-When a visitor goes over it, the firewall answers 429 without the app's JSON body. `src/lib/explainText.js` tells that apart from the AI's own limit and the Explain page shows "You have asked many times in a short time" with a countdown (from `Retry-After` when sent, otherwise one minute).
+When a visitor goes over it, the firewall answers 429 without the app's JSON body. `src/lib/explainText.js` tells that apart from the AI's own limit and the Explain page shows "You have asked many times in a short time" with a countdown (from `Retry-After` when sent, otherwise one minute). The three-question limit of "Ask about this" is kept by the app, not the server; the firewall rule is the server-side limit.
 
 ## Run it locally
 
@@ -57,9 +57,10 @@ The manual release checks are in [`docs/manual-checklist.md`](docs/manual-checkl
 
 ## Project layout
 
-- `src/` – the React app. `src/lib/wordStore.js` (saved words) and `src/lib/historyStore.js` (past explanations) are the only files that touch localStorage. `shared/topics.js` holds the topic list used by both the app and the server.
-- `api/explain.js` – thin Vercel adapter. `api/_lib/handleExplain.js` holds the request logic; `api/_lib/aiProvider.js` is the only file that knows about Groq.
+- `src/` – the React app. `src/lib/wordStore.js` (saved words), `src/lib/historyStore.js` (past explanations), `src/lib/activityStore.js` (practice days), `src/lib/languageStore.js` and `src/lib/theme.js` are the only files that touch localStorage. `shared/topics.js` holds the topic list used by both the app and the server.
+- `api/explain.js` and `api/ask.js` – thin Vercel adapters. `api/_lib/handleExplain.js` and `api/_lib/handleAsk.js` hold the request logic, `api/_lib/runAi.js` the retry and rate-limit handling, and `api/_lib/aiProvider.js` is the only file that knows about Groq.
+- `shared/languages.js` – the languages for "Help in my language". Add one there (code, English name, label) and both the menu and the server accept it.
 
-## Ideas for version 2
+## Ideas for later
 
-Login and accounts, follow-up questions, more practice modes, your own labels on words, practising one topic at a time, other languages.
+Login and accounts, so words follow you between devices without a backup file; your own labels on words.

@@ -1,16 +1,18 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import EmptyState from '../components/EmptyState.jsx'
+import HelpLine from '../components/HelpLine.jsx'
 import LevelDots from '../components/LevelDots.jsx'
 import ListenButton from '../components/ListenButton.jsx'
 import Streak from '../components/Streak.jsx'
 import { useToast } from '../components/Toast.jsx'
+import WordForm from '../components/WordForm.jsx'
 import { listPracticeDays } from '../lib/activityStore.js'
 import { MAX_FILE_BYTES, downloadBackup, readBackup } from '../lib/backup.js'
 import { dayKey, whenDue } from '../lib/days.js'
 import { importHistory, listHistory } from '../lib/historyStore.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
-import { deleteWord, importWords, listWords, restoreWord } from '../lib/wordStore.js'
+import { deleteWord, importWords, listWords, restoreWord, saveWord, updateWord } from '../lib/wordStore.js'
 import { TOPICS } from '../../shared/topics.js'
 
 const LEVELS = [
@@ -42,6 +44,19 @@ export default function WordsPage() {
   const [query, setQuery] = useState('')
   const [topic, setTopic] = useState('All')
   const fileInput = useRef(null)
+  // The word being edited (its id), and whether the "Add a word" form is open.
+  const [editing, setEditing] = useState(null)
+  const [adding, setAdding] = useState(false)
+  // Where focus goes when a form closes: the button that opened it.
+  const returnFocus = useRef(null)
+  // Saved words link to the explanation they came from while History still has it.
+  const kept = new Set(listHistory().map((h) => h.id))
+
+  useEffect(() => {
+    if (!returnFocus.current) return
+    document.getElementById(returnFocus.current)?.focus()
+    returnFocus.current = null
+  })
 
   const counts = topicCounts(words)
   // If the chosen topic has no words left (after a delete), show them all.
@@ -59,6 +74,40 @@ export default function WordsPage() {
       return
     }
     toast(`Deleted “${removed.word.word}”`, { action: { label: 'Undo', onClick: () => undo(removed) } })
+  }
+
+  function closeForms(focusId) {
+    returnFocus.current = focusId
+    setEditing(null)
+    setAdding(false)
+  }
+
+  function addWord(v) {
+    const r = saveWord({
+      word: v.word,
+      meaning: v.meaning.trim(),
+      sentence: v.sentence.trim(),
+      topic: v.topic,
+      note: v.note,
+    })
+    if (!r.ok) {
+      return r.reason === 'duplicate' ? `“${v.word.trim()}” is already in My Words.` : 'Your browser could not save this word.'
+    }
+    closeForms('add-word')
+    // Show the new word, even if a search or topic was hiding it.
+    setQuery('')
+    setTopic('All')
+    setWords(listWords())
+    toast(`Added “${r.word.word}”`)
+    return null
+  }
+
+  function editWord(id, v) {
+    if (!updateWord(id, { meaning: v.meaning, note: v.note, topic: v.topic })) return 'Your browser could not save the change.'
+    closeForms(`edit-${id}`)
+    setWords(listWords())
+    toast('Changes saved')
+    return null
   }
 
   function undo(removed) {
@@ -91,6 +140,22 @@ export default function WordsPage() {
           {words.length > 0 && <p className="soft">{count(words.length, 'word', 'words')} saved in this browser</p>}
         </div>
         <div className="page-actions">
+          <button
+            id="add-word"
+            type="button"
+            className="btn btn-outline"
+            aria-expanded={adding}
+            onClick={() => {
+              setEditing(null)
+              setAdding(true)
+            }}
+          >
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
+            Add a word
+          </button>
           <input
             ref={fileInput}
             type="file"
@@ -122,18 +187,36 @@ export default function WordsPage() {
                 </svg>
                 Export
               </button>
-              <Link className="btn btn-violet" to="/practice">
-                Practise these words
-              </Link>
+              {activeTopic === 'All' ? (
+                <Link className="btn btn-violet" to="/practice">
+                  Practise these words
+                </Link>
+              ) : (
+                <Link className="btn btn-violet" to={`/practice?topic=${encodeURIComponent(activeTopic)}`}>
+                  Practise {activeTopic} ({counts.find(([t]) => t === activeTopic)[1]})
+                </Link>
+              )}
             </>
           )}
         </div>
       </div>
 
+      {adding && (
+        <div className="card word-form-card">
+          <WordForm
+            withWord
+            title="Add a word"
+            submitLabel="Add to My Words"
+            onSubmit={addWord}
+            onCancel={() => closeForms('add-word')}
+          />
+        </div>
+      )}
+
       {words.length === 0 ? (
         <EmptyState
           title="No saved words yet"
-          text="Explain a text and save the hard words. They will show up here. Moving from another browser? Import your backup file."
+          text="Explain a text and save the hard words, or add a word yourself. They will show up here. Moving from another browser? Import your backup file."
           linkTo="/"
           linkLabel="Explain something"
         />
@@ -183,31 +266,66 @@ export default function WordsPage() {
             <p className="soft">No words match your search.</p>
           ) : (
             <ul className="word-cards">
-              {shown.map((w) => (
-                <li key={w.id} className="card word-card">
-                  <div className="word-card-text">
-                    <div className="word-title-row">
-                      <span className="word-title">{w.word}</span>
-                      <ListenButton text={w.word} />
+              {shown.map((w) =>
+                editing === w.id ? (
+                  <li key={w.id} className="card word-form-card">
+                    <WordForm
+                      title={`Edit “${w.word}”`}
+                      submitLabel="Save changes"
+                      initial={w}
+                      onSubmit={(v) => editWord(w.id, v)}
+                      onCancel={() => closeForms(`edit-${w.id}`)}
+                    />
+                  </li>
+                ) : (
+                  <li key={w.id} className="card word-card">
+                    <div className="word-card-text">
+                      <div className="word-title-row">
+                        <span className="word-title">{w.word}</span>
+                        <ListenButton text={w.word} />
+                      </div>
+                      <p>{w.meaning}</p>
+                      <HelpLine help={w.help} field="meaning" />
+                      {w.sentence && <p className="word-source">{w.sentence}</p>}
+                      {w.note && (
+                        <p className="word-note">
+                          <span className="word-note-label">My note:</span> {w.note}
+                        </p>
+                      )}
+                      {w.source && kept.has(w.source) && (
+                        <Link className="word-link" to={`/?item=${w.source}`}>
+                          See the explanation it came from
+                        </Link>
+                      )}
                     </div>
-                    <p>{w.meaning}</p>
-                    <p className="word-source">{w.sentence}</p>
-                  </div>
-                  <div className="word-card-side">
-                    <span className="topic-tag">{w.topic}</span>
-                    <LevelDots box={w.box} />
-                    <span className="review-day">Review {whenDue(w.due ?? today, today)}</span>
-                    <button
-                      type="button"
-                      className="btn btn-delete"
-                      aria-label={`Delete ${w.word}`}
-                      onClick={() => remove(w.id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </li>
-              ))}
+                    <div className="word-card-side">
+                      <span className="topic-tag">{w.topic}</span>
+                      <LevelDots box={w.box} />
+                      <span className="review-day">Review {whenDue(w.due ?? today, today)}</span>
+                      <button
+                        id={`edit-${w.id}`}
+                        type="button"
+                        className="btn btn-quiet"
+                        aria-label={`Edit ${w.word}`}
+                        onClick={() => {
+                          setAdding(false)
+                          setEditing(w.id)
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-delete"
+                        aria-label={`Delete ${w.word}`}
+                        onClick={() => remove(w.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ),
+              )}
             </ul>
           )}
         </>

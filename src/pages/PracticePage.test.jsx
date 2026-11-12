@@ -361,3 +361,113 @@ describe('reviews on the day they are due', () => {
     expect(localStorage.getItem('ple.practice-days.v1')).toBeNull()
   })
 })
+
+describe('focused practice', () => {
+  const word = (w, topic, over = {}) => ({ ...mk(w, 1, '2026-01-01T00:00:00Z'), topic, ...over })
+
+  function setupAt(path) {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <PracticePage />
+      </MemoryRouter>,
+    )
+    return user
+  }
+
+  const cardWord = () => screen.getByRole('button', { name: /^Show meaning of / })
+
+  test('?topic=React practises only the React words, due or not', () => {
+    put([
+      word('hook', 'React', { due: '2999-01-01', interval: 7 }),
+      word('promise', 'JavaScript'),
+      word('prop', 'React'),
+    ])
+    setupAt('/practice?topic=React')
+    expect(screen.getByText('Card 1 of 2')).toBeInTheDocument()
+    expect(screen.getByText(/Only React words, due today or not/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Practise all topics' })).toHaveAttribute('href', '/practice')
+    expect(cardWord()).not.toHaveAccessibleName('Show meaning of promise')
+  })
+
+  test('a topic with no words says so', () => {
+    put([word('promise', 'JavaScript')])
+    setupAt('/practice?topic=CSS')
+    expect(screen.getByRole('heading', { name: 'No CSS words yet' })).toBeInTheDocument()
+  })
+
+  test('an unknown topic practises everything', () => {
+    put([word('promise', 'JavaScript'), word('prop', 'React')])
+    setupAt('/practice?topic=Cooking')
+    expect(screen.getByText('Card 1 of 2')).toBeInTheDocument()
+    expect(screen.queryByText(/Only .* words/)).not.toBeInTheDocument()
+  })
+
+  describe('fill the blank', () => {
+    const blankable = () =>
+      put([
+        word('callback', 'JavaScript', { sentence: 'Pass a callback to the function.' }),
+        word('property', 'JavaScript', { sentence: 'Cannot read properties of undefined.' }),
+      ])
+
+    test('asks only for words whose sentence uses them, with the word hidden', async () => {
+      blankable()
+      const user = setupAt('/practice')
+      await user.click(screen.getByRole('button', { name: 'Fill the blank' }))
+      expect(screen.getByText('Card 1 of 1')).toBeInTheDocument()
+      const question = screen.getByRole('region', { name: 'Question' })
+      // Screen readers hear "blank" where the word was.
+      expect(question.querySelector('.blank-sentence')).toHaveTextContent('Pass a blank to the function.')
+      expect(question).toHaveTextContent('Meaning: callback means')
+      expect(screen.getByLabelText('The missing word')).toHaveFocus()
+    })
+
+    test('the right word is correct and moves the word on', async () => {
+      blankable()
+      const user = setupAt('/practice')
+      await user.click(screen.getByRole('button', { name: 'Fill the blank' }))
+      await user.type(screen.getByLabelText('The missing word'), '  CallBack {Enter}')
+      expect(screen.getByRole('status')).toHaveTextContent('Correct!')
+      expect(listWords().find((w) => w.word === 'callback').box).toBe(2)
+      expect(screen.getByRole('button', { name: 'Next' })).toHaveFocus()
+      await user.keyboard('{Enter}')
+      expect(screen.getByText(/You knew 1 of 1 word/)).toBeInTheDocument()
+    })
+
+    test('a wrong word shows the right one and counts as forgotten', async () => {
+      blankable()
+      const user = setupAt('/practice')
+      await user.click(screen.getByRole('button', { name: 'Fill the blank' }))
+      await user.type(screen.getByLabelText('The missing word'), 'function')
+      await user.click(screen.getByRole('button', { name: 'Check' }))
+      expect(screen.getByRole('status')).toHaveTextContent('The word is “callback”.')
+      expect(screen.getByRole('region', { name: 'Question' })).toHaveTextContent('Pass a callback to the function.')
+      expect(listWords().find((w) => w.word === 'callback').box).toBe(1)
+    })
+
+    test('Show the word counts as forgotten', async () => {
+      blankable()
+      const user = setupAt('/practice')
+      await user.click(screen.getByRole('button', { name: 'Fill the blank' }))
+      await user.click(screen.getByRole('button', { name: 'Show the word' }))
+      expect(screen.getByRole('status')).toHaveTextContent('The word is “callback”.')
+      expect(screen.getByLabelText('The missing word')).toHaveAttribute('readonly')
+    })
+
+    test('is off, with a reason, when no sentence uses its word', () => {
+      put([word('property', 'JavaScript', { sentence: 'Cannot read properties.' })])
+      setupAt('/practice')
+      const button = screen.getByRole('button', { name: 'Fill the blank' })
+      expect(button).toBeDisabled()
+      expect(button).toHaveAccessibleDescription('Fill the blank needs words whose saved sentence uses the word.')
+    })
+  })
+
+  test('the back of a flashcard shows the translation and the note', async () => {
+    put([word('callback', 'JavaScript', { note: 'Like a phone call back.', help: { lang: 'es', meaning: 'Una función.' } })])
+    const user = setupAt('/practice')
+    await user.click(cardWord())
+    expect(screen.getByText('Una función.')).toHaveAttribute('lang', 'es')
+    expect(screen.getByText('My note: Like a phone call back.')).toBeInTheDocument()
+  })
+})

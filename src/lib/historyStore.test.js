@@ -86,7 +86,7 @@ test('explaining the same text again replaces the old entry', () => {
 test('keeps only the newest entries', () => {
   for (let i = 0; i < MAX_ITEMS + 3; i++) addHistory({ text: `t${i}`, result: result() })
   const list = listHistory()
-  expect(MAX_ITEMS).toBe(20)
+  expect(MAX_ITEMS).toBe(50)
   expect(list).toHaveLength(MAX_ITEMS)
   expect(list[0].text).toBe(`t${MAX_ITEMS + 2}`)
   expect(list.at(-1).text).toBe('t3')

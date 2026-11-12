@@ -2,9 +2,9 @@ import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { ToastProvider } from '../components/Toast.jsx'
-import { explainText } from '../lib/explainText.js'
+import { askAbout, explainText } from '../lib/explainText.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
-import { addHistory, listHistory } from '../lib/historyStore.js'
+import { addHistory, getHistoryItem, listHistory } from '../lib/historyStore.js'
 import { SAMPLES } from '../lib/samples.js'
 import { hasWord, listWords, saveWord } from '../lib/wordStore.js'
 import ExplainPage from './ExplainPage.jsx'
@@ -88,7 +88,7 @@ test('shows five parts for an error answer', async () => {
   for (const name of ['In simple words', 'Why this happens', 'What to try next', 'Practical example', 'Hard words']) {
     expect(await screen.findByRole('heading', { level: 3, name })).toBeInTheDocument()
   }
-  expect(explainText).toHaveBeenCalledWith('some text')
+  expect(explainText).toHaveBeenCalledWith('some text', null, null)
 })
 
 test('hides What to try next for a docs answer', async () => {
@@ -250,7 +250,7 @@ test('explaining again leaves the History entry and clears it from the address',
   expect(await screen.findByText('A fresh answer.')).toBeInTheDocument()
   expect(screen.queryByText(/From your history/)).not.toBeInTheDocument()
   expect(screen.getByTestId('address')).toHaveTextContent(/^\/$/)
-  expect(explainText).toHaveBeenCalledWith('old pasted text')
+  expect(explainText).toHaveBeenCalledWith('old pasted text', null, null)
 })
 
 const simpler = () => screen.getByRole('button', { name: 'Make it simpler' })
@@ -271,7 +271,7 @@ test('Make it simpler asks again at the simpler level and says so', async () => 
   expect(screen.getByText('Not clear?')).toBeInTheDocument()
   await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
   expect(await screen.findByText('Even simpler words.')).toBeInTheDocument()
-  expect(explainText).toHaveBeenLastCalledWith('some text', 'simpler')
+  expect(explainText).toHaveBeenLastCalledWith('some text', 'simpler', null)
   expect(screen.getByText('Simpler version')).toBeInTheDocument()
 })
 
@@ -283,7 +283,7 @@ test('More detail asks again at the detail level and says so', async () => {
   await submit(user)
   await user.click(await screen.findByRole('button', { name: 'More detail' }))
   expect(await screen.findByText('A longer answer.')).toBeInTheDocument()
-  expect(explainText).toHaveBeenLastCalledWith('some text', 'detail')
+  expect(explainText).toHaveBeenLastCalledWith('some text', 'detail', null)
   expect(screen.getByText('More detailed version')).toBeInTheDocument()
 })
 
@@ -293,7 +293,7 @@ test('explaining differently uses the explained text, not later edits in the box
   await submit(user, 'first text')
   await user.type(screen.getByLabelText('Your text'), ' and more')
   await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
-  expect(explainText).toHaveBeenLastCalledWith('first text', 'simpler')
+  expect(explainText).toHaveBeenLastCalledWith('first text', 'simpler', null)
 })
 
 test('a new Explain goes back to the normal level', async () => {
@@ -304,7 +304,7 @@ test('a new Explain goes back to the normal level', async () => {
   await screen.findByText('More detailed version')
   await user.click(explainButton())
   await screen.findByRole('button', { name: 'More detail' })
-  expect(explainText).toHaveBeenLastCalledWith('some text')
+  expect(explainText).toHaveBeenLastCalledWith('some text', null, null)
   expect(screen.queryByText('More detailed version')).not.toBeInTheDocument()
 })
 
@@ -318,7 +318,7 @@ test('Try again after going offline repeats the simpler request', async () => {
   await user.click(await screen.findByRole('button', { name: 'Make it simpler' }))
   await user.click(await screen.findByRole('button', { name: 'Try again' }))
   expect(await screen.findByText('Back online.')).toBeInTheDocument()
-  expect(explainText).toHaveBeenLastCalledWith('some text', 'simpler')
+  expect(explainText).toHaveBeenLastCalledWith('some text', 'simpler', null)
   expect(screen.getByText('Simpler version')).toBeInTheDocument()
 })
 
@@ -339,7 +339,7 @@ test('an entry opened from History can be explained differently', async () => {
   const user = setup(`/?item=${item.id}`)
   await user.click(simpler())
   expect(await screen.findByText('Simpler old.')).toBeInTheDocument()
-  expect(explainText).toHaveBeenLastCalledWith('old pasted text', 'simpler')
+  expect(explainText).toHaveBeenLastCalledWith('old pasted text', 'simpler', null)
   expect(screen.queryByText(/From your history/)).not.toBeInTheDocument()
   expect(detail()).toBeEnabled()
 })
@@ -408,7 +408,7 @@ describe('reusing History to save AI calls', () => {
     explainText.mockResolvedValue({ ok: true, data: docsData })
     const user = setup()
     await submit(user, 'kept text')
-    expect(explainText).toHaveBeenCalledWith('kept text')
+    expect(explainText).toHaveBeenCalledWith('kept text', null, null)
   })
 
   test('Make it simpler uses a kept simpler answer and says which version it is', async () => {
@@ -437,7 +437,7 @@ describe('reusing History to save AI calls', () => {
     await submit(user, 'kept text')
     await user.click(screen.getByRole('button', { name: 'Ask the AI again' }))
     expect(await screen.findByText('Fresh answer.')).toBeInTheDocument()
-    expect(explainText).toHaveBeenCalledWith('kept text')
+    expect(explainText).toHaveBeenCalledWith('kept text', null, null)
     expect(screen.queryByText(/From your history/)).not.toBeInTheDocument()
     expect(listHistory().map((h) => h.result.explanation)).toEqual(['Fresh answer.'])
   })
@@ -447,7 +447,7 @@ describe('reusing History to save AI calls', () => {
     explainText.mockResolvedValue({ ok: true, data: errorData })
     const user = setup(`/?item=${item.id}`)
     await user.click(screen.getByRole('button', { name: 'Ask the AI again' }))
-    expect(explainText).toHaveBeenCalledWith('kept text', 'detail')
+    expect(explainText).toHaveBeenCalledWith('kept text', 'detail', null)
   })
 })
 
@@ -475,7 +475,7 @@ describe('the keyboard shortcut', () => {
     const user = setup()
     await user.type(screen.getByLabelText('Your text'), 'some text')
     await user.keyboard(keys)
-    expect(explainText).toHaveBeenCalledWith('some text')
+    expect(explainText).toHaveBeenCalledWith('some text', null, null)
   })
 
   test('Enter alone adds a new line', async () => {
@@ -531,7 +531,7 @@ describe('the examples', () => {
     await user.click(example())
     await user.click(explainButton())
     expect(await screen.findByText('From the AI.')).toBeInTheDocument()
-    expect(explainText).toHaveBeenCalledWith(sample.text)
+    expect(explainText).toHaveBeenCalledWith(sample.text, null, null)
     expect(screen.queryByText(/^Example answer/)).not.toBeInTheDocument()
   })
 
@@ -717,5 +717,193 @@ describe('when the free AI limit is used up', () => {
     await submit(user)
     expect(await screen.findByRole('alert')).toHaveTextContent('The service is busy. Please try again in a minute.')
     expect(explainButton()).toBeEnabled()
+  })
+})
+
+describe('help in my language', () => {
+  const helped = {
+    ...docsData,
+    help: { lang: 'es', explanation: 'Tu código usó .map().', why: 'La lista no estaba lista.' },
+    words: [{ ...docsData.words[0], help: { lang: 'es', meaning: 'Un valor sin definir.' } }],
+  }
+
+  test('is English only at first', () => {
+    setup()
+    expect(screen.getByLabelText('Help in my language')).toHaveValue('')
+  })
+
+  test('the chosen language goes with the request and is remembered', async () => {
+    explainText.mockResolvedValue({ ok: true, data: helped })
+    const user = setup()
+    await user.selectOptions(screen.getByLabelText('Help in my language'), 'es')
+    await submit(user)
+    expect(explainText).toHaveBeenCalledWith('some text', null, 'es')
+    expect(localStorage.getItem('ple.language.v1')).toBe('es')
+    expect(listHistory()[0].language).toBe('es')
+  })
+
+  test('the translation shows under the English, marked with its language', async () => {
+    explainText.mockResolvedValue({ ok: true, data: helped })
+    const user = setup()
+    await submit(user)
+    const line = await screen.findByText('Tu código usó .map().')
+    expect(line).toHaveAttribute('lang', 'es')
+    expect(line).toHaveAttribute('dir', 'auto')
+    expect(screen.getByText('La lista no estaba lista.')).toBeInTheDocument()
+    expect(screen.getAllByText('Un valor sin definir.').length).toBeGreaterThan(0)
+  })
+
+  test('a saved word keeps its translated meaning', async () => {
+    explainText.mockResolvedValue({ ok: true, data: helped })
+    const user = setup()
+    await submit(user)
+    await user.click(await screen.findByRole('button', { name: 'Save undefined' }))
+    expect(listWords()[0].help).toEqual({ lang: 'es', meaning: 'Un valor sin definir.' })
+  })
+
+  test('a kept English answer is not reused once a language is chosen', async () => {
+    addHistory({ text: 'kept text', result: errorData })
+    localStorage.setItem('ple.language.v1', 'es')
+    explainText.mockResolvedValue({ ok: true, data: helped })
+    const user = setup()
+    await submit(user, 'kept text')
+    expect(explainText).toHaveBeenCalledWith('kept text', null, 'es')
+  })
+})
+
+describe('saved words point back to their explanation', () => {
+  test('a word saved from an answer keeps the History entry id', async () => {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user)
+    await user.click(await screen.findByRole('button', { name: 'Save undefined' }))
+    expect(listWords()[0].source).toBe(listHistory()[0].id)
+  })
+
+  test('a word saved from an example has no source', async () => {
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: SAMPLES[0].label }))
+    await user.click(screen.getByRole('button', { name: `Save ${SAMPLES[0].result.words[0].word}` }))
+    expect(listWords()[0].source).toBeUndefined()
+  })
+})
+
+describe('ask about this', () => {
+  const box = () => screen.getByLabelText(/Ask a question about this text|Ask another question/)
+
+  async function answered(user) {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    await submit(user)
+    await screen.findByText(errorData.explanation)
+  }
+
+  test('sends the text, the explanation and the question, and shows the answer', async () => {
+    askAbout.mockResolvedValue({ ok: true, data: { answer: 'A prop is an input.' } })
+    const user = setup()
+    await answered(user)
+    await user.type(box(), 'What is a prop?')
+    await user.click(screen.getByRole('button', { name: 'Ask' }))
+    expect(await screen.findByText('A prop is an input.')).toBeInTheDocument()
+    expect(screen.getByText('What is a prop?')).toBeInTheDocument()
+    expect(askAbout).toHaveBeenCalledWith({
+      text: 'some text',
+      explanation: errorData.explanation,
+      question: 'What is a prop?',
+      earlier: [],
+      language: null,
+    })
+    expect(box()).toHaveValue('')
+    expect(screen.getByText('2 of 3 questions left for this text')).toBeInTheDocument()
+  })
+
+  test('the answer is kept with the History entry', async () => {
+    askAbout.mockResolvedValue({ ok: true, data: { answer: 'Kept answer.' } })
+    const user = setup()
+    await answered(user)
+    await user.type(box(), 'Why?')
+    await user.click(screen.getByRole('button', { name: 'Ask' }))
+    await screen.findByText('Kept answer.')
+    expect(getHistoryItem(listHistory()[0].id).followUps).toEqual([{ question: 'Why?', answer: 'Kept answer.' }])
+  })
+
+  test('an opened entry shows its questions', () => {
+    const item = addHistory({ text: 'kept text', result: errorData })
+    const raw = JSON.parse(localStorage.getItem('ple.history.v1'))
+    raw[0].followUps = [{ question: 'Old question?', answer: 'Old answer.' }]
+    localStorage.setItem('ple.history.v1', JSON.stringify(raw))
+    setup(`/?item=${item.id}`)
+    expect(screen.getByText('Old question?')).toBeInTheDocument()
+    expect(screen.getByText('Old answer.')).toBeInTheDocument()
+  })
+
+  test('after three questions the box goes, with the reason', async () => {
+    askAbout.mockResolvedValue({ ok: true, data: { answer: 'An answer.' } })
+    const user = setup()
+    await answered(user)
+    for (const q of ['one', 'two', 'three']) {
+      await user.type(box(), q)
+      await user.click(screen.getByRole('button', { name: 'Ask' }))
+      await screen.findByText(q)
+    }
+    expect(screen.queryByRole('button', { name: 'Ask' })).not.toBeInTheDocument()
+    expect(screen.getByText(/You asked 3 questions about this text/)).toBeInTheDocument()
+    expect(askAbout).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        question: 'three',
+        earlier: [
+          { question: 'one', answer: 'An answer.' },
+          { question: 'two', answer: 'An answer.' },
+        ],
+      }),
+    )
+  })
+
+  test('Ask stays off until a question is typed', async () => {
+    const user = setup()
+    await answered(user)
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
+  })
+
+  test('offline keeps the question in the box and says so', async () => {
+    askAbout.mockResolvedValue({ ok: false, error: 'offline' })
+    const user = setup()
+    await answered(user)
+    await user.type(box(), 'Why?')
+    await user.click(screen.getByRole('button', { name: 'Ask' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('No connection. Your question is still in the box.')
+    expect(box()).toHaveValue('Why?')
+  })
+
+  test('a used-up limit shows the wait and turns off Explain too', async () => {
+    askAbout.mockResolvedValue({ ok: false, error: 'busy', retryAfter: 30, limit: 'visitor' })
+    const user = setup()
+    await answered(user)
+    await user.type(box(), 'Why?')
+    await user.click(screen.getByRole('button', { name: 'Ask' }))
+    expect(await screen.findByText(/You can ask again in 30 seconds/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
+    expect(explainButton()).toBeDisabled()
+  })
+
+  test('a new answer starts with no questions', async () => {
+    askAbout.mockResolvedValue({ ok: true, data: { answer: 'First answer.' } })
+    const user = setup()
+    await answered(user)
+    await user.type(box(), 'Why?')
+    await user.click(screen.getByRole('button', { name: 'Ask' }))
+    await screen.findByText('First answer.')
+    await user.click(screen.getByRole('button', { name: 'Make it simpler' }))
+    await screen.findByText('Simpler version')
+    expect(screen.queryByText('First answer.')).not.toBeInTheDocument()
+    expect(screen.getByText('3 of 3 questions left for this text')).toBeInTheDocument()
+  })
+
+  test('the translated answer shows under the English one', async () => {
+    askAbout.mockResolvedValue({ ok: true, data: { answer: 'English.', help: { lang: 'es', answer: 'Español.' } } })
+    const user = setup()
+    await answered(user)
+    await user.type(box(), 'Why?')
+    await user.click(screen.getByRole('button', { name: 'Ask' }))
+    expect(await screen.findByText('Español.')).toHaveAttribute('lang', 'es')
   })
 })

@@ -1,5 +1,6 @@
 import { normaliseTopic } from '../../shared/topics.js'
 import { isDayKey } from './days.js'
+import { isHelp } from './help.js'
 
 const KEY = 'ple.words.v1'
 
@@ -44,11 +45,27 @@ const normalise = (word) => String(word).trim().toLowerCase()
 
 const isGap = (v) => Number.isInteger(v) && v >= 0
 
+export const MAX_WORD = 60
+export const MAX_MEANING = 300
+export const MAX_SENTENCE = 500
+export const MAX_NOTE = 500
+
+// The optional parts of a word that are valid, ready to spread into it:
+// the translated meaning, the user's own note and the History entry it came from.
+function extras(w) {
+  return {
+    ...(isHelp(w.help, ['meaning']) && { help: { lang: w.help.lang, meaning: w.help.meaning } }),
+    ...(isText(w.note) && w.note.trim() !== '' && { note: w.note.trim().slice(0, MAX_NOTE) }),
+    ...(isText(w.source) && w.source !== '' && { source: w.source }),
+  }
+}
+
 // Words saved before topics existed have none; they show as General without being rewritten.
 // Words never practised have no due day or gap: they are due now. Broken values count as missing.
 export function listWords() {
-  return read().map((w) => ({
+  return read().map(({ help, note, source, ...w }) => ({
     ...w,
+    ...extras({ help, note, source }),
     topic: normaliseTopic(w.topic),
     due: isDayKey(w.due) ? w.due : undefined,
     interval: isGap(w.interval) ? w.interval : undefined,
@@ -60,7 +77,8 @@ export function hasWord(word) {
   return read().some((w) => normalise(w.word) === key)
 }
 
-export function saveWord({ word, meaning, sentence, topic }) {
+// source: the id of the History entry the word came from (none for a word added by hand).
+export function saveWord({ word, meaning, sentence = '', topic, help, note, source }) {
   if (hasWord(word)) return { ok: false, reason: 'duplicate' }
   const saved = {
     id: crypto.randomUUID(),
@@ -70,6 +88,7 @@ export function saveWord({ word, meaning, sentence, topic }) {
     topic: normaliseTopic(topic),
     savedAt: new Date().toISOString(),
     box: 1,
+    ...extras({ help, note, source }),
   }
   if (!write([saved, ...read()])) return { ok: false, reason: 'storage' }
   return { ok: true, word: saved }
@@ -111,6 +130,7 @@ export function importWords(list) {
       topic: normaliseTopic(w.topic),
       savedAt: w.savedAt,
       box: w.box,
+      ...extras(w),
       ...(isGap(w.interval) && { interval: w.interval }),
       ...(isDayKey(w.due) && { due: w.due }),
     })
@@ -119,6 +139,22 @@ export function importWords(list) {
   if (added === 0) return { ok: true, added }
   words.sort((a, b) => b.savedAt.localeCompare(a.savedAt))
   return write(words) ? { ok: true, added } : { ok: false, added: 0 }
+}
+
+// "Edit" on My Words: the meaning, the note and the topic. A new meaning drops the
+// translation of the old one. An empty note removes it.
+export function updateWord(id, { meaning, note, topic }) {
+  const words = read()
+  const word = words.find((w) => w.id === id)
+  if (!word || !isText(meaning) || meaning.trim() === '') return false
+  const { help, note: _oldNote, ...rest } = word
+  const changed = {
+    ...rest,
+    meaning: meaning.trim(),
+    topic: normaliseTopic(topic),
+    ...extras({ help: meaning.trim() === word.meaning ? help : undefined, note }),
+  }
+  return write(words.map((w) => (w.id === id ? changed : w)))
 }
 
 // After a practice answer: the level (box 1 to 3), the gap in days and the due day.

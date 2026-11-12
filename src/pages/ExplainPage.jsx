@@ -1,19 +1,31 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ExplainPreview from '../components/ExplainPreview.jsx'
+import FollowUp from '../components/FollowUp.jsx'
+import HelpLine from '../components/HelpLine.jsx'
 import ListenButton from '../components/ListenButton.jsx'
 import MarkedText from '../components/MarkedText.jsx'
 import ResultCard from '../components/ResultCard.jsx'
 import Skeleton from '../components/Skeleton.jsx'
 import { useToast } from '../components/Toast.jsx'
-import { explainText } from '../lib/explainText.js'
+import { askAbout, explainText } from '../lib/explainText.js'
 import { formatDate } from '../lib/formatDate.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
 import { formatWait } from '../lib/formatWait.js'
-import { addHistory, findHistory, getHistoryItem, levelOf } from '../lib/historyStore.js'
+import {
+  addFollowUp,
+  addHistory,
+  findHistory,
+  followUpsOf,
+  getHistoryItem,
+  languageOf,
+  levelOf,
+} from '../lib/historyStore.js'
+import { getLanguage, setLanguage as storeLanguage } from '../lib/languageStore.js'
 import { SAMPLES } from '../lib/samples.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import { hasWord, saveWord } from '../lib/wordStore.js'
+import { LANGUAGES } from '../../shared/languages.js'
 
 const MAX_CHARS = 3000
 
@@ -24,6 +36,7 @@ const ERROR_MESSAGES = {
   too_long: 'Please shorten the text',
   offline: 'No connection',
   bad_level: 'Something went wrong. Please try again.',
+  bad_language: 'Something went wrong. Please try again.',
 }
 
 const LEVEL_NOTES = { simpler: 'Simpler version', detail: 'More detailed version' }
@@ -64,8 +77,16 @@ export default function ExplainPage() {
   const [result, setResult] = useState(opened?.result ?? null)
   const [error, setError] = useState(null)
   const [saved, setSaved] = useState(() => (opened ? savedKeys(opened.result.words) : new Set()))
-  // The text and level that the answer (or error) on screen belongs to.
-  const [request, setRequest] = useState(opened ? { text: opened.text, level: levelOf(opened) } : null)
+  // The text, level and language that the answer (or error) on screen belongs to.
+  const [request, setRequest] = useState(
+    opened ? { text: opened.text, level: levelOf(opened), language: languageOf(opened) } : null,
+  )
+  // "Help in my language", used for every new question to the AI. null is English only.
+  const [language, setLanguage] = useState(getLanguage)
+  // The History entry the answer on screen is kept in (none for an example), so follow-up
+  // questions and saved words can point back to it.
+  const [entryId, setEntryId] = useState(opened?.id ?? null)
+  const [followUps, setFollowUps] = useState(() => (opened ? followUpsOf(opened) : []))
   // Set when the free AI limit is used up: { until (ms), total (seconds), limit }.
   const [wait, setWait] = useState(null)
   const [now, setNow] = useState(() => Date.now())
@@ -75,6 +96,11 @@ export default function ExplainPage() {
   const headingRef = useRef(null)
   // Only move the screen and focus after the user asks for something, not on page load.
   const userAsked = useRef(false)
+  // The answer on screen, so a follow-up that comes back after a new answer is dropped.
+  const resultRef = useRef(result)
+  useEffect(() => {
+    resultRef.current = result
+  }, [result])
 
   const remaining = wait ? Math.max(0, Math.ceil((wait.until - now) / 1000)) : 0
   const waiting = remaining > 0
@@ -102,6 +128,17 @@ export default function ExplainPage() {
     run({ text: text.trim(), level: null })
   }
 
+  function chooseLanguage(code) {
+    setLanguage(code)
+    storeLanguage(code)
+  }
+
+  function startWait(answer) {
+    const start = Date.now()
+    setWait({ until: start + answer.retryAfter * 1000, total: answer.retryAfter, limit: answer.limit ?? null })
+    setNow(start)
+  }
+
   function onPasteKeyDown(e) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
@@ -119,7 +156,9 @@ export default function ExplainPage() {
     userAsked.current = true
     leaveHistoryEntry()
     setText(sample.text)
-    setRequest({ text: sample.text, level: null })
+    setRequest({ text: sample.text, level: null, language: null })
+    setEntryId(null)
+    setFollowUps([])
     setResult(sample.result)
     setSaved(savedKeys(sample.result.words))
     setError(null)
@@ -134,6 +173,8 @@ export default function ExplainPage() {
     setOpened(item)
     setParams({ item: item.id }, { replace: true })
     setRequest(req)
+    setEntryId(item.id)
+    setFollowUps(followUpsOf(item))
     setResult(item.result)
     setSaved(savedKeys(item.result.words))
     setError(null)
@@ -141,11 +182,13 @@ export default function ExplainPage() {
     setStatus('done')
   }
 
+  // The chosen language is added to { text, level } here.
   // fresh: ask the AI even when History has an answer ("Ask the AI again").
-  async function run(req, { fresh = false } = {}) {
+  async function run({ text: reqText, level }, { fresh = false } = {}) {
     if (loading || waiting) return
+    const req = { text: reqText, level, language }
     if (!fresh) {
-      const kept = findHistory(req.text, req.level)
+      const kept = findHistory(req.text, req.level, req.language)
       // Pressing Explain on the entry already on screen asks again, as before.
       if (kept && kept.id !== opened?.id) {
         showKept(kept, req)
@@ -160,25 +203,46 @@ export default function ExplainPage() {
     setWait(null)
     setIsSample(false)
     leaveHistoryEntry()
-    const answer = await (req.level ? explainText(req.text, req.level) : explainText(req.text))
+    setFollowUps([])
+    setEntryId(null)
+    const answer = await explainText(req.text, req.level, req.language)
     if (answer.ok) {
-      addHistory({ text: req.text, result: answer.data, level: req.level })
+      const kept = addHistory({ text: req.text, result: answer.data, level: req.level, language: req.language })
+      setEntryId(kept?.id ?? null)
       setSaved(savedKeys(answer.data.words))
       setResult(answer.data)
       setStatus('done')
     } else {
-      if (answer.error === 'busy' && answer.retryAfter) {
-        const start = Date.now()
-        setWait({ until: start + answer.retryAfter * 1000, total: answer.retryAfter, limit: answer.limit ?? null })
-        setNow(start)
-      }
+      if (answer.error === 'busy' && answer.retryAfter) startWait(answer)
       setError(answer.error)
       setStatus('error')
     }
   }
 
+  // "Ask about this". The answer is kept with the History entry, so it is there when reopened.
+  async function askMore(question) {
+    const about = result
+    const answer = await askAbout({
+      text: request.text,
+      explanation: about.explanation,
+      question,
+      earlier: followUps,
+      language,
+    })
+    if (resultRef.current !== about) return { ok: true }
+    if (!answer.ok) {
+      const waits = answer.error === 'busy' && Boolean(answer.retryAfter)
+      if (waits) startWait(answer)
+      return { ...answer, waiting: waits }
+    }
+    const item = { question, answer: answer.data.answer, ...(answer.data.help && { help: answer.data.help }) }
+    setFollowUps((prev) => [...prev, item])
+    if (entryId) addFollowUp(entryId, item)
+    return { ok: true }
+  }
+
   function save(w) {
-    const r = saveWord(w)
+    const r = saveWord({ ...w, source: entryId ?? undefined })
     if (!r.ok && r.reason === 'storage') {
       toast('Your browser could not save this word.')
       return
@@ -225,6 +289,30 @@ export default function ExplainPage() {
             </span>
           </div>
           {tooLong && <p className="count-over">Please shorten the text</p>}
+        </div>
+
+        <div className="stack-xs">
+          <label htmlFor="language" className="field-label">
+            Help in my language
+          </label>
+          <select
+            id="language"
+            className="search-box language-select"
+            value={language ?? ''}
+            aria-describedby="language-hint"
+            onChange={(e) => chooseLanguage(e.target.value || null)}
+          >
+            <option value="">No, English only</option>
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+          <p id="language-hint" className="soft field-hint">
+            The explanation and the meanings of the hard words also come in your language, in smaller text under the
+            English.
+          </p>
         </div>
 
         <div className="explain-actions">
@@ -330,9 +418,11 @@ export default function ExplainPage() {
           <>
             <ResultCard tone="sunshine" title="In simple words" raised>
               <p className="result-lead">{result.explanation}</p>
+              <HelpLine help={result.help} field="explanation" />
             </ResultCard>
             <ResultCard tone="coral" title="Why this happens">
               <p>{result.why}</p>
+              <HelpLine help={result.help} field="why" />
             </ResultCard>
             {result.steps.length > 0 && (
               <ResultCard tone="teal" title="What to try next">
@@ -367,6 +457,7 @@ export default function ExplainPage() {
                             <ListenButton text={w.word} />
                           </div>
                           <p>{w.meaning}</p>
+                          <HelpLine help={w.help} field="meaning" />
                         </div>
                         <button
                           type="button"
@@ -392,6 +483,16 @@ export default function ExplainPage() {
                 More detail
               </button>
             </div>
+            <FollowUp
+              key={`${entryId ?? 'none'}-${request.text}-${request.level}`}
+              items={followUps}
+              onAsk={askMore}
+              waitText={
+                waiting
+                  ? `${LIMIT_TITLES[wait.limit ?? 'unknown']} You can ask again in ${formatWait(remaining)}.`
+                  : null
+              }
+            />
           </>
         )}
       </section>

@@ -54,7 +54,7 @@ test('shows the empty state when nothing is kept', () => {
 test('says how many explanations are kept and where', () => {
   two()
   setup()
-  expect(screen.getByText('2 explanations kept in this browser. Only the newest 20 are kept.')).toBeInTheDocument()
+  expect(screen.getByText('2 explanations kept in this browser. Only the newest 50 are kept.')).toBeInTheDocument()
 })
 
 test('uses the singular for one explanation', () => {

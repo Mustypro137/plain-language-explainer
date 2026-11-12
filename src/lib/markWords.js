@@ -24,3 +24,11 @@ export function markWords(text, words) {
   if (last < text.length) pieces.push({ text: text.slice(last) })
   return pieces
 }
+
+// "Fill the blank": the saved sentence in pieces, with every use of the word as a blank
+// ({ blank: true, text }). Null if the sentence does not use the word as it is saved.
+export function blankOut(sentence, word) {
+  const pieces = markWords(sentence, [{ word }])
+  if (!pieces.some((p) => p.word)) return null
+  return pieces.map((p) => (p.word ? { blank: true, text: p.text } : { text: p.text }))
+}
