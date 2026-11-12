@@ -1636,6 +1636,24 @@ button.flashcard {
   font-weight: 700;
 }
 
+/* On a phone the three practice modes share one row across the page: three equal parts,
+   and a long name ("Multiple choice") breaks inside its own part instead of wrapping the switch */
+@media (max-width: 559px) {
+  .practice-focus .mode-switch {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .practice-focus .mode-switch .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 15px;
+    line-height: 1.2;
+    text-align: center;
+  }
+}
+
 /* Multiple choice */
 .choice-card {
   display: flex;

@@ -48,6 +48,14 @@ test('an unknown address shows Page not found with a way back', () => {
   expect(screen.getByRole('link', { name: 'Go to Explain' })).toHaveAttribute('href', '/')
 })
 
+test('only the Page not found screen asks search engines not to keep it', () => {
+  const { unmount } = renderAt('/no-such-page')
+  expect(document.head.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+  unmount()
+  renderAt('/')
+  expect(document.head.querySelector('meta[name="robots"]')).toBeNull()
+})
+
 test('the app name in the top bar links to the Explain page', () => {
   renderAt('/words')
   expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Plain-Language Explainer' })).toHaveAttribute(

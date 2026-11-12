@@ -156,6 +156,14 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] Before the first answer, the right side shows a line made plain ("npm ERR! could not resolve" and its plain version) and three points. With saved words, a dark "N words in your sky" card links to My Words.
 - [ ] With a word that was practised and is due again, "Welcome back · N words are fading. Review them" appears above the headline and goes to Practice. With none fading, it does not show.
 
+## Fourth polish round
+
+- [ ] Sharing the site link (for example in a chat app) shows the new card: the line-by-line headline beside two npm lines made plain.
+- [ ] `/robots.txt` is plain text and `/favicon.ico` is an icon, not the app's HTML page.
+- [ ] An unknown address (for example `/abc`) shows Page not found, with `<meta name="robots" content="noindex">` in the page head.
+- [ ] On a 320 px and a 390 px phone, the three practice modes sit on one row; "Multiple choice" may break onto two lines inside its own part.
+- [ ] Scroll down an answer until the top bar is gone, then save a word: the star flies up to the top edge of the screen, not off it.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.

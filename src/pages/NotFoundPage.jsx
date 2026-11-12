@@ -5,6 +5,9 @@ export default function NotFoundPage() {
   usePageTitle('Page not found')
   return (
     <main className="page narrow-page">
+      {/* The server answers every address with the app (status 200), so search engines are told here
+          not to keep this one. React puts the tag in <head> and removes it when the page changes. */}
+      <meta name="robots" content="noindex" />
       <h1>Page not found</h1>
       <EmptyState
         title="There is nothing at this address"
