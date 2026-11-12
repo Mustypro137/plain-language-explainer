@@ -378,6 +378,14 @@ a {
   resize: vertical;
 }
 
+/* On short screens (a 720px laptop) five lines instead of eight, so the Explain button
+   is on the first screen. The box still grows with its handle. */
+@media (max-height: 820px) {
+  .paste-box {
+    height: calc(5 * 1.6em + 28px + 4px);
+  }
+}
+
 .paste-meta {
   display: flex;
   flex-wrap: wrap;
@@ -1377,8 +1385,6 @@ kbd {
 /* Help in my language: the translation sits under the English, smaller, so English is read first */
 .help-line {
   margin: 6px 0 0;
-  padding-inline-start: 12px;
-  border-inline-start: 3px solid var(--line);
   color: var(--soft-ink);
   font-size: 0.92em;
   line-height: 1.5;
@@ -1386,6 +1392,28 @@ kbd {
 
 .field-hint {
   font-size: 15px;
+}
+
+/* "Help in my language": label and menu on one line, the hint under them */
+.language-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding-top: 20px;
+  border-top: 2px dashed var(--line);
+}
+
+.language-row .language-select {
+  width: auto;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 16px;
+}
+
+.language-row .field-hint {
+  flex-basis: 100%;
 }
 
 /* A native select, styled like the other boxes, with room for its arrow */

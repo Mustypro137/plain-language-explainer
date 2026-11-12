@@ -91,6 +91,14 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] My Words: "Add a word" adds a word typed by hand; the same word again (any letter case) is refused. "Edit" changes the meaning, topic and note in place, and focus goes back to the Edit button. Escape cancels.
 - [ ] A word saved from an explanation has "See the explanation it came from", which opens it. Explaining the same text again keeps the link working.
 
+## Second audit fixes
+
+- [ ] On a phone (390 x 844) and on a 1280 x 720 laptop, the Explain button is on the first screen without scrolling. "Help in my language" sits below the examples.
+- [ ] In the browser's Network tab, the page answers with a `content-security-policy` header, and the Console shows no "Content Security Policy" errors on any page, in light and dark mode.
+- [ ] Dark mode still opens dark with no white flash (the inline theme script is allowed by the policy).
+- [ ] Reload twice: the `/assets/` files come from the browser's cache (`max-age=31536000, immutable`).
+- [ ] Confetti plays after a round with 4 of 5 or better, and not after a weaker one.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.
