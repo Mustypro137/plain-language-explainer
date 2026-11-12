@@ -864,16 +864,197 @@ a:hover {
   white-space: nowrap;
 }
 
-/* "Not clear?" under an explanation */
-.explain-again {
+/* Line by line: the user's text part by part, beside what each part means */
+.lines {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
+  padding: 20px 0 8px;
 }
 
-.explain-again-label {
+.lines-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 0 24px;
+}
+
+.lines-hint {
+  font-size: 14px;
+}
+
+.lines-head,
+.line-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 4px 16px;
+  padding: 12px 24px;
+}
+
+.lines-head {
+  padding-top: 0;
+  padding-bottom: 8px;
+  border-bottom: var(--border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--soft-ink);
+}
+
+.lines-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.line-row + .line-row {
+  border-top: var(--border);
+}
+
+.line-row:hover {
+  background: var(--panel-2);
+}
+
+.line-num {
+  padding-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--faint-ink);
+  white-space: nowrap;
+}
+
+.line-orig {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--soft-ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.line-plain p {
+  margin: 0;
+}
+
+.lines .word-panel-slot {
+  padding: 0 24px;
+}
+
+.lines .word-panel-slot:not(:empty) {
+  padding-bottom: 16px;
+}
+
+/* On a phone each row stacks: the number, your part, then the plain version under it */
+@media (max-width: 639px) {
+  .lines-head {
+    display: none;
+  }
+
+  .lines-top,
+  .line-row,
+  .lines .word-panel-slot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .line-row {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .line-plain {
+    grid-column: 2;
+  }
+}
+
+/* Reading level: three stops on a track, real radio buttons underneath */
+.level-slider {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.level-slider legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.level-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 380px;
+}
+
+.level-rail {
+  position: absolute;
+  left: calc(100% / 6);
+  right: calc(100% / 6);
+  top: 15px;
+  height: 2px;
+  background: var(--line-strong);
+}
+
+.level-rail-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(max(0, var(--at)) * 50%);
+  background: var(--accent-fill);
+  transition: width var(--t-state) var(--ease);
+}
+
+.level-stop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 15px;
+  color: var(--soft-ink);
+  cursor: pointer;
+}
+
+.stop-dot {
+  width: 22px;
+  height: 22px;
+  margin-top: 5px;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--panel);
+  transition:
+    background-color var(--t-state) var(--ease),
+    border-color var(--t-state) var(--ease),
+    box-shadow var(--t-state) var(--ease);
+}
+
+.level-stop:hover .stop-dot {
+  border-color: var(--accent);
+}
+
+.level-stop-on {
+  color: var(--ink);
   font-weight: 700;
+}
+
+.level-stop-on .stop-dot {
+  border-color: var(--accent-fill);
+  background: var(--accent-fill);
+  box-shadow: 0 0 0 5px var(--accent-soft);
+}
+
+.level-stop:has(input:focus-visible) .stop-dot {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.level-slider:disabled .level-stop {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* History page: the cards reuse the word-card layout */

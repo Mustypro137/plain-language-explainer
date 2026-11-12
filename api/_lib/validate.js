@@ -79,6 +79,25 @@ function hardWords(list, language) {
   return words.slice(0, MAX_WORDS)
 }
 
+// "Line by line": one plain sentence per numbered part, or per group of parts ("n" to "to").
+// Entries out of range, overlapping an earlier one or without text are dropped; parts left
+// without a plain line simply show without one. No usable entry at all gives [].
+function plainLines(list, count, language) {
+  if (!Array.isArray(list) || !count) return []
+  const lines = []
+  let next = 1
+  const entries = list
+    .filter((l) => l && Number.isInteger(l.n) && isText(l.plain))
+    .sort((a, b) => a.n - b.n)
+  for (const l of entries) {
+    const to = Number.isInteger(l.to) && l.to > l.n ? Math.min(l.to, count) : l.n
+    if (l.n < next || l.n > count) continue
+    lines.push({ from: l.n, to, plain: l.plain.trim(), ...helpOf(language, { plain: l.plain_help }) })
+    next = to + 1
+  }
+  return lines
+}
+
 function stripFence(raw) {
   const match = raw.trim().match(/^```[a-z]*\s*([\s\S]*?)\s*```$/i)
   return match ? match[1] : raw
@@ -94,7 +113,8 @@ function parseJson(raw) {
 }
 
 // language: the code asked for ("es"), or null. Without it any translation is ignored.
-export function parseAiAnswer(raw, language = null) {
+// parts: how many numbered parts the text had (segmentText), for the line-by-line view.
+export function parseAiAnswer(raw, language = null, parts = 0) {
   const data = parseJson(raw)
   if (!data) return null
   if (data.kind !== 'error' && data.kind !== 'docs') return null
@@ -113,6 +133,7 @@ export function parseAiAnswer(raw, language = null) {
     steps,
     example: typeof data.example === 'string' ? data.example : '',
     words,
+    lines: plainLines(data.lines, parts, language),
     ...helpOf(language, { explanation: data.explanation_help, why: data.why_help }),
   }
 }

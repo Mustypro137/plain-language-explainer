@@ -110,6 +110,17 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] Empty My Words, Practice and History show the dashed-star picture and a main button.
 - [ ] The four top-bar links fit at 320px and 360px wide, and the tab icon is the dark "Aa" square.
 
+## Design step 2 (line by line)
+
+- [ ] Explain the React error from the samples above: "Line by line" shows the error line beside one plain sentence, and all the "at …" lines as one row ("02–05") that says where it happened (your file and line), not what React does inside.
+- [ ] The npm error gives one row per line (6 rows), each in plain English. A docs paragraph gives one row per sentence.
+- [ ] With a language chosen, each row has its translation under the English.
+- [ ] Hard words are dotted in your text; a tap shows the meaning with Listen and Save, a second tap closes it. The Hard words card does not show your text a second time.
+- [ ] The Reading level slider shows the level of the answer on screen. Choosing Simpler or More detail asks again (Network tab: `level`), and the slider is off while it loads. Arrow keys move between the stops.
+- [ ] An explanation saved in History before this change still opens, with the five parts and no table.
+- [ ] Copy explanation includes a "Line by line" section.
+- [ ] On a phone each row stacks: number, your part, then the plain version.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.
