@@ -62,8 +62,21 @@ export function saveWord({ word, meaning, sentence, topic }) {
   return { ok: true, word: saved }
 }
 
+// Returns what restoreWord needs to undo the delete, or null if nothing was deleted.
 export function deleteWord(id) {
-  write(read().filter((w) => w.id !== id))
+  const words = read()
+  const index = words.findIndex((w) => w.id === id)
+  if (index === -1) return null
+  if (!write(words.filter((w) => w.id !== id))) return null
+  return { word: words[index], index }
+}
+
+// Puts a deleted word back where it was. If it was saved again meanwhile, that copy stays.
+export function restoreWord({ word, index }) {
+  const words = read()
+  if (words.some((w) => normalise(w.word) === normalise(word.word))) return true
+  words.splice(Math.min(index, words.length), 0, word)
+  return write(words)
 }
 
 export function setBox(id, box) {

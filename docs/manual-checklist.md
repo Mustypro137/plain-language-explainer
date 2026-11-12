@@ -45,6 +45,22 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] My Words: new saved words show a topic; words saved before topics show General. The new / learning / known numbers match the cards, and topic buttons filter the list together with search.
 - [ ] Free limit: press Explain several times quickly until the limit is hit. The box says "used up for this minute" and counts down; Explain stays off until it reaches 0, then "Try again" works.
 
+## Version 3, phase 1 checks
+
+- [ ] On a phone (or 390px wide), paste a text and press Explain: the page scrolls to the loading cards, then to the answer, without pressing anything else.
+- [ ] With a screen reader, the new answer is read from the "Explanation" heading. After "Make it simpler", focus is on that heading, not lost.
+- [ ] `Ctrl` + `Enter` (`⌘` + `Enter` on a Mac) in the text box explains. `Enter` alone adds a new line. The hint is hidden on a phone.
+- [ ] Before the first answer, the right side shows "What you will get" with the five parts, and the layout does not jump when the answer arrives.
+- [ ] Each of the three examples fills the box and shows its answer at once, with "Example answer, written in advance" and no `/api/explain` request in the Network tab. Examples do not appear in History.
+- [ ] The sample React error from this checklist returns at most five hard words, with no file names (`react-dom.development.js`) and no names from the code (`ProductList`).
+- [ ] Long lines in "Practical example" wrap inside the card.
+- [ ] Delete a word: "Deleted “word”" and an Undo button appear. Undo brings the word back in the same place with the same level. The message stays while the pointer or keyboard focus is on it.
+- [ ] History: Delete and Clear all both offer Undo, and Clear all no longer opens a browser dialog.
+- [ ] The browser tab shows the "Aa" icon and the page name (for example "My Words · Plain-Language Explainer").
+- [ ] An unknown address such as `/abc` shows "Page not found" with a link back to Explain.
+- [ ] The app name in the top bar goes to the Explain page.
+- [ ] A link to the site pasted into a chat app shows the title, the description and the share image.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.

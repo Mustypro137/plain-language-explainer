@@ -4,7 +4,8 @@ import EmptyState from '../components/EmptyState.jsx'
 import LevelDots from '../components/LevelDots.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { downloadWords } from '../lib/exportWords.js'
-import { deleteWord, listWords } from '../lib/wordStore.js'
+import { usePageTitle } from '../lib/usePageTitle.js'
+import { deleteWord, listWords, restoreWord } from '../lib/wordStore.js'
 import { TOPICS } from '../../shared/topics.js'
 
 const LEVELS = [
@@ -21,6 +22,7 @@ function topicCounts(words) {
 }
 
 export default function WordsPage() {
+  usePageTitle('My Words')
   const toast = useToast()
   const [words, setWords] = useState(listWords)
   const [query, setQuery] = useState('')
@@ -35,9 +37,19 @@ export default function WordsPage() {
   )
 
   function remove(id) {
-    deleteWord(id)
+    const removed = deleteWord(id)
     setWords(listWords())
-    toast('Deleted')
+    if (!removed) {
+      toast('Your browser could not delete this word.')
+      return
+    }
+    toast(`Deleted “${removed.word.word}”`, { action: { label: 'Undo', onClick: () => undo(removed) } })
+  }
+
+  function undo(removed) {
+    const ok = restoreWord(removed)
+    setWords(listWords())
+    toast(ok ? `“${removed.word.word}” is back` : 'Your browser could not bring the word back.')
   }
 
   return (

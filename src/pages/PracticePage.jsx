@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom'
 import ChoiceQuestion from '../components/ChoiceQuestion.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import { buildChoices, buildRound, canUseChoices, nextBox } from '../lib/practice.js'
+import { usePageTitle } from '../lib/usePageTitle.js'
 import { listWords, setBox } from '../lib/wordStore.js'
 
 const noun = (n) => (n === 1 ? 'word' : 'words')
 
 export default function PracticePage() {
+  usePageTitle('Practice')
   // The round is built once, so box changes during it do not reorder the cards.
   const [pool, setPool] = useState(listWords)
   const [round, setRound] = useState(() => buildRound(pool))

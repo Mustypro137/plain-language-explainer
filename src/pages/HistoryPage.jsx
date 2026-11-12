@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import EmptyState from '../components/EmptyState.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { formatDate } from '../lib/formatDate.js'
-import { MAX_ITEMS, clearHistory, deleteHistoryItem, listHistory } from '../lib/historyStore.js'
+import { usePageTitle } from '../lib/usePageTitle.js'
+import { MAX_ITEMS, clearHistory, deleteHistoryItem, listHistory, restoreHistory } from '../lib/historyStore.js'
 
 const NAME_CHARS = 60
 
@@ -11,20 +12,35 @@ const firstLine = (text) => text.split('\n')[0].trim()
 const shortName = (line) => (line.length > NAME_CHARS ? `${line.slice(0, NAME_CHARS)}…` : line)
 
 export default function HistoryPage() {
+  usePageTitle('History')
   const toast = useToast()
   const [items, setItems] = useState(listHistory)
 
-  function remove(id) {
-    deleteHistoryItem(id)
+  // Undo replaces the "are you sure?" dialog: nothing is lost for good straight away.
+  function offerUndo(message, removed) {
+    if (removed.length === 0) {
+      toast('Your browser could not delete this.')
+      return
+    }
+    toast(message, { action: { label: 'Undo', onClick: () => undo(removed) } })
+  }
+
+  function undo(removed) {
+    const ok = restoreHistory(removed)
     setItems(listHistory())
-    toast('Deleted')
+    toast(ok ? 'Brought back' : 'Your browser could not bring it back.')
+  }
+
+  function remove(id) {
+    const removed = deleteHistoryItem(id)
+    setItems(listHistory())
+    offerUndo('Explanation deleted', removed)
   }
 
   function clearAll() {
-    if (!window.confirm('Delete all explanations from this browser?')) return
-    clearHistory()
+    const removed = clearHistory()
     setItems(listHistory())
-    toast('History cleared')
+    offerUndo('History cleared', removed)
   }
 
   return (

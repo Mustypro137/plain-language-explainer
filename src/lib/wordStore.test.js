@@ -1,4 +1,4 @@
-import { deleteWord, hasWord, listWords, saveWord, setBox } from './wordStore.js'
+import { deleteWord, hasWord, listWords, restoreWord, saveWord, setBox } from './wordStore.js'
 
 const entry = (word) => ({ word, meaning: 'm', sentence: 's' })
 
@@ -38,6 +38,41 @@ test('deleteWord removes only that word', () => {
   const a = saveWord(entry('a')).word
   saveWord(entry('b'))
   deleteWord(a.id)
+  expect(listWords().map((w) => w.word)).toEqual(['b'])
+})
+
+test('deleteWord returns the word and its place, and restoreWord puts it back there', () => {
+  const c = saveWord(entry('c')).word
+  const b = saveWord(entry('b')).word
+  saveWord(entry('a'))
+  setBox(b.id, 3)
+  const removed = deleteWord(b.id)
+  expect(removed).toEqual({ word: { ...b, box: 3 }, index: 1 })
+  expect(listWords().map((w) => w.word)).toEqual(['a', 'c'])
+  expect(restoreWord(removed)).toBe(true)
+  expect(listWords().map((w) => [w.word, w.box])).toEqual([['a', 1], ['b', 3], ['c', 1]])
+  expect(c.id).toBe(listWords()[2].id)
+})
+
+test('deleteWord returns null for an unknown id', () => {
+  saveWord(entry('a'))
+  expect(deleteWord('nope')).toBeNull()
+  expect(listWords()).toHaveLength(1)
+})
+
+test('restoreWord does not add a second copy of a word saved again meanwhile', () => {
+  const removed = deleteWord(saveWord(entry('callback')).word.id)
+  saveWord(entry('Callback'))
+  expect(restoreWord(removed)).toBe(true)
+  expect(listWords().map((w) => w.word)).toEqual(['Callback'])
+})
+
+test('restoreWord fits the word in when the list got shorter', () => {
+  saveWord(entry('b'))
+  const a = saveWord(entry('a')).word
+  const removedB = deleteWord(listWords()[1].id)
+  deleteWord(a.id)
+  restoreWord(removedB)
   expect(listWords().map((w) => w.word)).toEqual(['b'])
 })
 

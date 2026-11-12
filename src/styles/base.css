@@ -145,9 +145,13 @@ a {
 
 .brand {
   grid-area: brand;
+  justify-self: start;
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  color: var(--ink);
+  text-decoration: none;
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: 19px;
@@ -286,8 +290,47 @@ a {
   gap: 24px;
 }
 
-.explain-left .btn-primary {
-  align-self: flex-start;
+.explain-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+
+.key-hint {
+  font-size: 15px;
+}
+
+/* Touch screens have no Ctrl key to press */
+@media (hover: none) {
+  .key-hint {
+    display: none;
+  }
+}
+
+.samples {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 2px dashed var(--line);
+}
+
+.samples-label {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.samples-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sample-btn {
+  min-height: 40px;
+  padding: 6px 14px;
+  font-weight: 400;
 }
 
 .explain-right {
@@ -296,6 +339,29 @@ a {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  scroll-margin-top: 16px;
+}
+
+/* The answer column before the first answer: a quiet outline of the five parts */
+.preview-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 24px;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.preview-part {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 14px 0;
+  font-size: 16px;
+}
+
+.preview-part + .preview-part {
+  border-top: 1px solid var(--line);
 }
 
 .paste-box {
@@ -435,7 +501,9 @@ a {
   font-family: var(--font-mono);
   font-size: 15px;
   line-height: 1.6;
-  overflow-x: auto;
+  /* Long lines wrap instead of hiding off the side of the card */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .word-rows {
@@ -511,14 +579,39 @@ a {
   left: 50%;
   bottom: 24px;
   transform: translateX(-50%);
+  width: max-content;
   max-width: calc(100% - 32px);
-  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 12px 10px 20px;
   border: var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   background: var(--sunshine);
   color: var(--on-bright);
   font-weight: 700;
+}
+
+.toast-action {
+  min-height: 40px;
+  padding: 4px 14px;
+  border: 2px solid var(--on-bright);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--on-bright);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.toast-action:hover {
+  background: rgb(0 0 0 / 0.08);
+}
+
+.toast-action:focus-visible {
+  outline-color: var(--on-bright);
 }
 
 /* Centred single-column pages */

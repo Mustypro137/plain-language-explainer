@@ -27,7 +27,7 @@ test('reads a good answer', () => expect(parseAiAnswer(JSON.stringify(good))).to
 test('reads an answer inside a Markdown code fence', () =>
   expect(parseAiAnswer('```json\n' + JSON.stringify(good) + '\n```')).toEqual(good))
 
-test('keeps at most 3 steps and 8 words', () => {
+test('keeps at most 3 steps and 5 words', () => {
   const many = {
     ...good,
     steps: ['1', '2', '3', '4', '5'],
@@ -35,7 +35,30 @@ test('keeps at most 3 steps and 8 words', () => {
   }
   const r = parseAiAnswer(JSON.stringify(many))
   expect(r.steps).toHaveLength(3)
-  expect(r.words).toHaveLength(8)
+  expect(r.words).toHaveLength(5)
+})
+
+const word = (w) => ({ word: w, meaning: 'm', sentence: 's' })
+
+test('drops file names and paths but keeps names like Node.js', () => {
+  const raw = JSON.stringify({
+    ...good,
+    words: ['react-dom.development.js', 'src/App.jsx', 'C:\\app\\index.js', 'App.jsx:14', 'Node.js', 'callback'].map(word),
+  })
+  expect(parseAiAnswer(raw).words.map((w) => w.word)).toEqual(['Node.js', 'callback'])
+})
+
+test('dropped words leave room for good ones up to 5', () => {
+  const raw = JSON.stringify({
+    ...good,
+    words: ['a/b', 'c/d', 'one', 'two', 'three', 'four', 'five', 'six'].map(word),
+  })
+  expect(parseAiAnswer(raw).words.map((w) => w.word)).toEqual(['one', 'two', 'three', 'four', 'five'])
+})
+
+test('keeps one copy of a word that appears twice in any letter case', () => {
+  const raw = JSON.stringify({ ...good, words: ['Callback', ' callback ', 'promise'].map(word) })
+  expect(parseAiAnswer(raw).words.map((w) => w.word)).toEqual(['Callback', 'promise'])
 })
 
 test('empties steps when kind is docs', () => {

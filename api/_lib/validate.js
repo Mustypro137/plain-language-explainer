@@ -2,7 +2,7 @@ import { normaliseTopic } from '../../shared/topics.js'
 
 export const MAX_CHARS = 3000
 const MAX_STEPS = 3
-const MAX_WORDS = 8
+const MAX_WORDS = 5
 
 export function validateText(text) {
   if (typeof text !== 'string') return { ok: false, error: 'empty' }
@@ -21,6 +21,25 @@ export function validateLevel(level) {
 }
 
 const isText = (v) => typeof v === 'string' && v.trim() !== ''
+
+// A path ("src/App.jsx"), a file with a line number ("App.jsx:14") or a build file
+// ("react-dom.development.js") belongs to one project, so it is not a word to learn.
+// One dot stays allowed for names like "Node.js".
+const looksLikeFile = (word) => /[\\/]|:\d/.test(word) || (word.match(/\./g) ?? []).length > 1
+
+function hardWords(list) {
+  if (!Array.isArray(list)) return []
+  const seen = new Set()
+  const words = []
+  for (const w of list) {
+    if (!w || !isText(w.word) || !isText(w.meaning) || !isText(w.sentence) || looksLikeFile(w.word)) continue
+    const key = w.word.trim().toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    words.push({ word: w.word, meaning: w.meaning, sentence: w.sentence, topic: normaliseTopic(w.topic) })
+  }
+  return words.slice(0, MAX_WORDS)
+}
 
 function stripFence(raw) {
   const match = raw.trim().match(/^```[a-z]*\s*([\s\S]*?)\s*```$/i)
@@ -42,12 +61,7 @@ export function parseAiAnswer(raw) {
     data.kind === 'docs' || !Array.isArray(data.steps)
       ? []
       : data.steps.filter(isText).slice(0, MAX_STEPS)
-  const words = Array.isArray(data.words)
-    ? data.words
-        .filter((w) => w && isText(w.word) && isText(w.meaning) && isText(w.sentence))
-        .slice(0, MAX_WORDS)
-        .map(({ word, meaning, sentence, topic }) => ({ word, meaning, sentence, topic: normaliseTopic(topic) }))
-    : []
+  const words = hardWords(data.words)
 
   return {
     kind: data.kind,

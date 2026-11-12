@@ -71,10 +71,26 @@ export function addHistory({ text, result }) {
   return write([item, ...others].slice(0, MAX_ITEMS)) ? item : null
 }
 
+// Both return the removed entries, so restoreHistory can undo them; [] if nothing changed.
 export function deleteHistoryItem(id) {
-  write(read().filter((h) => h.id !== id))
+  const items = read()
+  const removed = items.filter((h) => h.id === id)
+  if (removed.length === 0 || !write(items.filter((h) => h.id !== id))) return []
+  return removed
 }
 
 export function clearHistory() {
-  write([])
+  const items = read()
+  return write([]) ? items : []
+}
+
+// Merges removed entries back, newest first. A text explained again meanwhile keeps its newer entry.
+export function restoreHistory(removed) {
+  const byText = new Map()
+  for (const h of [...read(), ...removed.filter(isItem)]) {
+    const kept = byText.get(h.text)
+    if (!kept || h.savedAt > kept.savedAt) byText.set(h.text, h)
+  }
+  const items = [...byText.values()].sort((a, b) => b.savedAt.localeCompare(a.savedAt))
+  return write(items.slice(0, MAX_ITEMS))
 }

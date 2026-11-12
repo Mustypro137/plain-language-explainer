@@ -26,6 +26,13 @@ test('the JSON keys stay the same at every level', () => {
   }
 })
 
+test('asks for at most 5 words to learn, with no file or code names', () => {
+  const [system] = buildMessages('t', null)
+  expect(system.content).toMatch(/up to 5 hard words/)
+  expect(system.content).toMatch(/Never include file names, paths, line numbers/)
+  expect(system.content).toMatch(/names from the user's own code/)
+})
+
 test('asks for a topic from the fixed list on each word', () => {
   const [system] = buildMessages('t', null)
   expect(system.content).toContain('"topic"')
