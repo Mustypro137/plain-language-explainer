@@ -38,7 +38,7 @@ export default function FollowUp({ items, onAsk, waitText }) {
 
   return (
     <section className="card follow-up" aria-labelledby={headingId}>
-      <h3 id={headingId} className="label-chip tone-teal">
+      <h3 id={headingId} className="label-chip">
         Ask about this
       </h3>
 

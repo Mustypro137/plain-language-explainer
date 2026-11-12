@@ -1,49 +1,83 @@
+/* Clear Lens: calm and precise. Indigo means "you can act here", the star colour means
+   "your progress", and nothing else gets colour. Thin lines instead of shadows. */
 :root {
-  --paper: #faf7f0;
-  --card: #ffffff;
-  --ink: #1f2430;
-  --soft-ink: #5b6270;
-  --teal: #0f766e;
-  --sunshine: #ffd43b;
-  --coral: #ff8a70;
-  --violet: #6247c7;
-  --line: #e7e2d6;
-  --alert: #b42318;
+  --page: #f5f6f8;
+  --panel: #ffffff;
+  --panel-2: #fafbfc; /* a quiet fill inside a panel: your text, code labels */
+  --seg: #e7e9ef; /* the track of a segmented switch */
+  --ink: #0e1525;
+  --soft-ink: #3b4458;
+  --faint-ink: #5f6880; /* small labels on a panel only */
+  --line: #e1e4ea;
+  --line-strong: #d5d9e2;
 
-  /* Roles that differ between light and dark */
-  --outline: var(--ink); /* card and button outlines */
-  --shadow-ink: var(--ink); /* the hard offset shadows */
-  --link: var(--teal); /* links and the focus ring */
-  --on-bright: #1f2430; /* text on sunshine and coral: always dark */
-  --on-strong: #ffffff; /* text on teal and violet: always white */
-  --code-bg: #1f2430;
-  --code-text: #faf7f0;
+  --accent: #4338ca; /* links, focus ring, selected borders */
+  --accent-fill: #4338ca; /* main buttons */
+  --accent-hover: #3730a3;
+  --on-accent: #ffffff;
+  --accent-soft: #eef0ff; /* selected backgrounds */
+  --accent-text: #3730a3; /* text on accent-soft */
 
-  --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
+  --star: #b45309; /* your progress: saved and known words, streak days */
+  --star-soft: #fff3c4;
+  --star-text: #6b4e00;
+  --known: #1e5e34;
+  --known-soft: #e3f5e9;
+  --alert: #9b1c1c;
+  --alert-soft: #fdecec;
+  --code-bg: #0e1525;
+  --code-text: #f3f1ff;
+
+  --font-heading: 'Space Grotesk', system-ui, sans-serif;
   --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --radius: 8px;
-  --border: 2px solid var(--outline);
-  --shadow: 4px 4px 0 var(--shadow-ink);
+  --radius-sm: 8px; /* small controls */
+  --radius: 10px; /* inputs and buttons */
+  --radius-lg: 14px; /* panels */
+  --border: 1px solid var(--line);
+  --border-strong: 1px solid var(--line-strong);
+  --shadow-float: 0 8px 24px rgb(14 21 37 / 0.14); /* only for things that float */
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --t-press: 120ms;
+  --t-state: 200ms;
+  --t-enter: 320ms;
+  --t-star: 600ms;
 
   color-scheme: light;
 }
 
-/* Dark: marker on a dark notebook. Accent colours stay the same. */
+/* Dark is the night sky. */
 :root[data-theme='dark'] {
-  --paper: #14171e;
-  --card: #1e222b;
-  --ink: #f1ece0;
-  --soft-ink: #aab1be;
-  --line: #343a47;
-  --alert: #ff9387;
+  --page: #0e1330;
+  --panel: #171d45;
+  --panel-2: #121845;
+  --seg: #0e1330;
+  --ink: #f3f1ff;
+  --soft-ink: #c9c7e6;
+  --faint-ink: #b3b1d6;
+  --line: #2a3166;
+  --line-strong: #3a4280;
 
-  --outline: #9aa3b4;
-  --shadow-ink: #000000;
-  --link: #5fd0c2;
-  --code-bg: #0c0e13;
-  --code-text: #f1ece0;
+  --accent: #a5b4fc;
+  --accent-fill: #a5b4fc;
+  --accent-hover: #c7d2fe;
+  --on-accent: #0e1330;
+  --accent-soft: #252c66;
+  --accent-text: #dfe4ff;
+
+  --star: #ffd166;
+  --star-soft: #3a3418;
+  --star-text: #ffe7a3;
+  --known: #5eead4;
+  --known-soft: #10343a;
+  --alert: #ff9387;
+  --alert-soft: #3a1830;
+  --code-bg: #0a0e26;
+  --code-text: #f3f1ff;
+
+  --shadow-float: 0 8px 24px rgb(0 0 0 / 0.45);
 
   color-scheme: dark;
 }

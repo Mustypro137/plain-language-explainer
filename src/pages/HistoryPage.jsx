@@ -80,7 +80,7 @@ export default function HistoryPage() {
             return (
               <li key={h.id} className="card word-card">
                 <div className="word-card-text">
-                  <span className={`label-chip tone-${isError ? 'coral' : 'violet'}`}>{isError ? 'Error' : 'Docs'}</span>
+                  <span className={`kind-tag ${isError ? 'kind-error' : 'kind-docs'}`}>{isError ? 'Error' : 'Docs'}</span>
                   <p className="history-title">{line}</p>
                   <p className="history-snippet">{h.result.explanation}</p>
                   <time className="history-date" dateTime={h.savedAt}>
