@@ -9,6 +9,7 @@ import {
   levelOf,
   listHistory,
   restoreHistory,
+  setCheck,
 } from './historyStore.js'
 
 const KEY = 'ple.history.v1'
@@ -207,4 +208,35 @@ test('does not touch the saved words', () => {
   addHistory({ text: 'a', result: result() })
   clearHistory()
   expect(localStorage.getItem('ple.words.v1')).toBe('[]')
+})
+
+test('setCheck keeps the check-yourself score with the entry, and a new score replaces it', () => {
+  const item = addHistory({ text: 'some error', result: result() })
+  expect(setCheck(item.id, { right: 2, total: 3 })).toBe(true)
+  expect(getHistoryItem(item.id).check).toEqual({ right: 2, total: 3 })
+  setCheck(item.id, { right: 3, total: 3 })
+  expect(getHistoryItem(item.id).check).toEqual({ right: 3, total: 3 })
+})
+
+test('setCheck refuses a missing entry and a score that cannot be', () => {
+  const item = addHistory({ text: 'some error', result: result() })
+  expect(setCheck('missing', { right: 1, total: 3 })).toBe(false)
+  expect(setCheck(item.id, { right: 4, total: 3 })).toBe(false)
+  expect(setCheck(item.id, { right: 0, total: 0 })).toBe(false)
+  expect(setCheck(item.id, { right: 1.5, total: 3 })).toBe(false)
+  expect(getHistoryItem(item.id).check).toBeUndefined()
+})
+
+test('an entry with a broken score is kept, without the score', () => {
+  localStorage.setItem(KEY, JSON.stringify([stored({ check: 'x' })]))
+  const [item] = listHistory()
+  expect(item.id).toBe('g')
+  expect(item.check).toBeUndefined()
+})
+
+test('explaining the same text again drops the old score', () => {
+  const item = addHistory({ text: 'some error', result: result() })
+  setCheck(item.id, { right: 1, total: 3 })
+  addHistory({ text: 'some error', result: result({ why: 'A new reason.' }) })
+  expect(getHistoryItem(item.id).check).toBeUndefined()
 })

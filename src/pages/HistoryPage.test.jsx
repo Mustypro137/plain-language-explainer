@@ -161,7 +161,7 @@ describe('grouped by day', () => {
     localStorage.setItem(
       'ple.history.v1',
       JSON.stringify([
-        { ...mk('new', 'today text', 'error', now.toISOString()), level: 'simpler', language: 'es', followUps: [{ question: 'q', answer: 'a' }] },
+        { ...mk('new', 'today text', 'error', now.toISOString()), level: 'simpler', language: 'es', followUps: [{ question: 'q', answer: 'a' }], check: { right: 2, total: 3 } },
         mk('old', 'older text', 'docs', yesterday.toISOString()),
       ]),
     )
@@ -169,7 +169,7 @@ describe('grouped by day', () => {
     setup()
     expect(screen.getByRole('heading', { level: 2, name: 'Today' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Yesterday' })).toBeInTheDocument()
-    expect(screen.getByText('Simpler · in Spanish · 1 question · 1 word saved')).toBeInTheDocument()
+    expect(screen.getByText('Simpler · in Spanish · 1 question · 1 word saved · Checked 2 of 3')).toBeInTheDocument()
   })
 
   test('search keeps only the entries that match, by text or explanation', async () => {

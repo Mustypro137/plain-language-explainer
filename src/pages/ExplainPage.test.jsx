@@ -1011,3 +1011,46 @@ describe('line by line on the Explain page', () => {
     expect(explainText).toHaveBeenLastCalledWith('some text', 'detail', null)
   })
 })
+
+describe('check yourself', () => {
+  const threeLines = 'npm ERR! code ERESOLVE\nnpm ERR! could not resolve\nnpm ERR! peer react'
+  const linesData = {
+    ...errorData,
+    lines: [
+      { from: 1, to: 1, plain: 'npm stopped while installing.' },
+      { from: 2, to: 2, plain: 'npm could not find versions that fit.' },
+      { from: 3, to: 3, plain: 'A package wants another React.' },
+    ],
+  }
+
+  test('an example answer offers the check, with no AI call', async () => {
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'A React error' }))
+    expect(screen.getByRole('button', { name: /^Check yourself · \d questions?$/ })).toBeInTheDocument()
+    expect(explainText).not.toHaveBeenCalled()
+  })
+
+  test('finishing the check on a History entry keeps the score with it', async () => {
+    const item = addHistory({ text: threeLines, result: linesData })
+    const user = setup(`/?item=${item.id}`)
+    await user.click(screen.getByRole('button', { name: 'Check yourself · 3 questions' }))
+    const card = screen.getByRole('region', { name: 'Check yourself' })
+    for (let i = 0; i < 3; i++) {
+      await user.click(within(within(card).getByRole('list', { name: 'Choices' })).getAllByRole('button')[0])
+      await user.click(within(card).getByRole('button', { name: i < 2 ? 'Next' : 'See the result' }))
+    }
+    const check = getHistoryItem(item.id).check
+    expect(check.total).toBe(3)
+    expect(within(card).getByText(`${check.right} of 3`)).toBeInTheDocument()
+  })
+})
+
+test('a word panel left open does not follow onto the next answer', async () => {
+  saveWord({ word: 'peer', meaning: 'My own meaning of peer.', sentence: '' })
+  const user = setup()
+  await user.click(screen.getByRole('button', { name: 'An npm error' }))
+  await user.click(screen.getAllByRole('button', { name: /^peer, saved$/i })[0])
+  expect(screen.getByText(/You saved this/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'A docs paragraph' }))
+  expect(screen.queryByText(/You saved this/)).not.toBeInTheDocument()
+})

@@ -164,6 +164,15 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] On a 320 px and a 390 px phone, the three practice modes sit on one row; "Multiple choice" may break onto two lines inside its own part.
 - [ ] Scroll down an answer until the top bar is gone, then save a word: the star flies up to the top edge of the screen, not off it.
 
+## Check yourself and stars
+
+- [ ] An answer with 3 or more lines (or 3 hard words) ends with "Check yourself · 3 questions"; an answer with less shows no button. No request appears in the Network tab while checking.
+- [ ] Each question can be answered by click and by the keys 1 to 3; typing a number into the follow-up box does not answer it.
+- [ ] The result reads "N of 3". With a missed line question, "Read line 04 again" scrolls to that row and lights it up; "Check again" starts over.
+- [ ] After a check on an answer from History, the History list shows "Checked N of 3" for it.
+- [ ] With saved words that appear in a new text, they have a gold star in Line by line and "You know N words here" shows above the table; tapping one says "You saved this N days ago" (or today / yesterday).
+- [ ] With reduced motion turned on, the stars do not twinkle and the line does not fade.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.
