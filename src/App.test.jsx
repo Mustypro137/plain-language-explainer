@@ -22,7 +22,7 @@ test('shows four navigation links', () => {
 })
 
 test.each([
-  ['/', 'Paste the text you do not understand'],
+  ['/', /^Paste what you don’t understand\. Read it line by line/],
   ['/words', 'My Words'],
   ['/practice', 'Practice'],
   ['/history', 'History'],
@@ -46,6 +46,14 @@ test('an unknown address shows Page not found with a way back', () => {
   renderAt('/no-such-page')
   expect(screen.getByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Go to Explain' })).toHaveAttribute('href', '/')
+})
+
+test('only the Page not found screen asks search engines not to keep it', () => {
+  const { unmount } = renderAt('/no-such-page')
+  expect(document.head.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+  unmount()
+  renderAt('/')
+  expect(document.head.querySelector('meta[name="robots"]')).toBeNull()
 })
 
 test('the app name in the top bar links to the Explain page', () => {

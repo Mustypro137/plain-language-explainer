@@ -141,6 +141,29 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] An entry with a level, a language, questions or saved words lists them on one line (for example "Simpler · in Spanish · 1 question · 2 words saved").
 - [ ] Search History finds entries by their text or their explanation; with no match it says so.
 
+## Third audit fixes
+
+- [ ] A word saved but never practised shows in the Sky as a small "new" star with no dashed ring. After a round, a word that comes back today has the ring.
+- [ ] My Words shows one summary line (new, learning, known, and "fading" and "days in a row" only when there are some) instead of three tiles and a streak card.
+- [ ] An answer with line by line shows the hard words as chips: a tap opens the meaning with Listen and Save, and a saved word gets a small star. Older History entries still show the full list.
+- [ ] "Practical example" is folded: "Show the example" opens it.
+- [ ] The React error from the samples above no longer gives "hooks" or "render" as hard words.
+
+## Home screen
+
+- [ ] The headline reads "Paste what you don’t understand. Read it line by line in plain English.", and the Explain button is on the first screen on a phone (including 375 x 667) and on a 1280 x 720 laptop.
+- [ ] The box and its bar are one panel. Pasting shows a first guess under it ("Looks like an npm error · 2 lines") with no request in the Network tab; the count turns red past 3,000.
+- [ ] Before the first answer, the right side shows a line made plain ("npm ERR! could not resolve" and its plain version) and three points. With saved words, a dark "N words in your sky" card links to My Words.
+- [ ] With a word that was practised and is due again, "Welcome back · N words are fading. Review them" appears above the headline and goes to Practice. With none fading, it does not show.
+
+## Fourth polish round
+
+- [ ] Sharing the site link (for example in a chat app) shows the new card: the line-by-line headline beside two npm lines made plain.
+- [ ] `/robots.txt` is plain text and `/favicon.ico` is an icon, not the app's HTML page.
+- [ ] An unknown address (for example `/abc`) shows Page not found, with `<meta name="robots" content="noindex">` in the page head.
+- [ ] On a 320 px and a 390 px phone, the three practice modes sit on one row; "Multiple choice" may break onto two lines inside its own part.
+- [ ] Scroll down an answer until the top bar is gone, then save a word: the star flies up to the top edge of the screen, not off it.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.

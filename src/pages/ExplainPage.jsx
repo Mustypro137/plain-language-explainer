@@ -7,10 +7,13 @@ import HelpLine from '../components/HelpLine.jsx'
 import LevelSlider from '../components/LevelSlider.jsx'
 import LineByLine from '../components/LineByLine.jsx'
 import ListenButton from '../components/ListenButton.jsx'
+import WordChips from '../components/WordChips.jsx'
 import Loading from '../components/Loading.jsx'
 import MarkedText from '../components/MarkedText.jsx'
 import ResultCard from '../components/ResultCard.jsx'
 import { useToast } from '../components/Toast.jsx'
+import { dayKey } from '../lib/days.js'
+import { describeText } from '../lib/describeText.js'
 import { askAbout, explainText } from '../lib/explainText.js'
 import { formatDate } from '../lib/formatDate.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
@@ -28,7 +31,8 @@ import { getLanguage, setLanguage as storeLanguage } from '../lib/languageStore.
 import { SAMPLES } from '../lib/samples.js'
 import { flyStar } from '../lib/flyStar.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
-import { hasWord, saveWord } from '../lib/wordStore.js'
+import { isFading } from '../lib/practice.js'
+import { hasWord, listWords, saveWord } from '../lib/wordStore.js'
 import { LANGUAGES } from '../../shared/languages.js'
 
 const MAX_CHARS = 3000
@@ -96,6 +100,12 @@ export default function ExplainPage() {
   // The History entry the answer on screen is kept in (none for an example), so follow-up
   // questions and saved words can point back to it.
   const [entryId, setEntryId] = useState(opened?.id ?? null)
+  // For a returning visitor: how many words they have, and how many are fading.
+  const [mine] = useState(() => {
+    const words = listWords()
+    const today = dayKey()
+    return { saved: words.length, fading: words.filter((w) => isFading(w, today)).length }
+  })
   const [followUps, setFollowUps] = useState(() => (opened ? followUpsOf(opened) : []))
   // Set when the free AI limit is used up: { until (ms), total (seconds), limit }.
   const [wait, setWait] = useState(null)
@@ -278,30 +288,59 @@ export default function ExplainPage() {
     <main className="page explain-layout">
       <section className="explain-left" aria-label="Paste area">
         <div className="stack-sm">
-          <h1>
-            Paste the text you <mark className="highlight">do not understand</mark>
+          {mine.fading > 0 && (
+            <Link className="welcome-chip" to="/practice">
+              <span className="welcome-dot" aria-hidden="true" />
+              Welcome back · {mine.fading} {mine.fading === 1 ? 'word is' : 'words are'} fading. Review them
+            </Link>
+          )}
+          <h1 className="home-title">
+            Paste what you don’t understand. <span className="highlight">Read it line by line</span> in plain English.
           </h1>
-          <p className="soft">Documentation or an error message. You get it back in simple English.</p>
         </div>
 
         <div className="stack-xs">
-          <label htmlFor="paste" className="field-label">
-            Your text
-          </label>
-          <textarea
-            id="paste"
-            className="paste-box"
-            rows={8}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={onPasteKeyDown}
-          />
-          <div className="paste-meta">
-            <span>Do not paste passwords or secret keys. Explanations are kept in History in this browser.</span>
-            <span className={tooLong ? 'count-over' : undefined}>
-              {text.length.toLocaleString('en-US')} / {MAX_CHARS.toLocaleString('en-US')}
-            </span>
+          <div className="input-panel">
+            <label htmlFor="paste" className="visually-hidden">
+              Your text
+            </label>
+            <textarea
+              id="paste"
+              className="paste-box"
+              rows={8}
+              placeholder="Paste an error message or a paragraph from the docs…"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={onPasteKeyDown}
+            />
+            <div className="input-bar">
+              {describeText(text) && <span className="type-chip">{describeText(text)}</span>}
+              <span className={`input-count${tooLong ? ' count-over' : ''}`}>
+                {text.length.toLocaleString('en-US')} / {MAX_CHARS.toLocaleString('en-US')}
+              </span>
+              <span className="input-actions">
+                <p className="soft key-hint" aria-hidden="true">
+                  <kbd>{IS_MAC ? '⌘' : 'Ctrl'}</kbd> + <kbd>Enter</kbd>
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={!canExplain}
+                  onClick={explain}
+                  aria-keyshortcuts="Control+Enter Meta+Enter"
+                >
+                  Explain
+                  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14" />
+                    <path d="M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              </span>
+            </div>
           </div>
+          <p className="soft privacy-note">
+            Do not paste passwords or secret keys. Explanations are kept in History in this browser.
+          </p>
           {tooLong && (
             <div className="too-long">
               <span className="too-long-bar" aria-hidden="true" />
@@ -314,25 +353,6 @@ export default function ExplainPage() {
               </p>
             </div>
           )}
-        </div>
-
-        <div className="explain-actions">
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!canExplain}
-            onClick={explain}
-            aria-keyshortcuts="Control+Enter Meta+Enter"
-          >
-            Explain
-            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14" />
-              <path d="M13 6l6 6-6 6" />
-            </svg>
-          </button>
-          <p className="soft key-hint" aria-hidden="true">
-            or press <kbd>{IS_MAC ? '⌘' : 'Ctrl'}</kbd> + <kbd>Enter</kbd>
-          </p>
         </div>
 
         <div className="samples" role="group" aria-labelledby="samples-label">
@@ -415,7 +435,7 @@ export default function ExplainPage() {
 
         {result && request?.level && <p className="soft history-note">{LEVEL_NOTES[request.level]}</p>}
 
-        {status === 'idle' && <ExplainPreview />}
+        {status === 'idle' && <ExplainPreview savedCount={mine.saved} />}
 
         {error && (
           <div className={`error-box${error === 'busy' && wait ? ' error-wait' : ''}`} role="alert">
@@ -482,46 +502,55 @@ export default function ExplainPage() {
             )}
             {result.example && (
               <ResultCard title="Practical example">
-                <pre className="code-block">{result.example}</pre>
+                {/* Folded: useful, but long, and not what most readers need first. */}
+                <details className="fold">
+                  <summary>Show the example</summary>
+                  <pre className="code-block">{result.example}</pre>
+                </details>
               </ResultCard>
             )}
             {result.words.length > 0 && (
               <ResultCard title="Hard words">
-                {/* With line by line, the words are already marked in the table above. */}
-                {!(result.lines?.length > 0) && (
+                {/* With line by line the words are already dotted in the table above, so here
+                    they are only a row of chips. Older answers keep the full list. */}
+                {result.lines?.length > 0 ? (
+                  <WordChips words={result.words} isSaved={(w) => saved.has(wordKey(w.word))} onSave={save} />
+                ) : (
+                  <>
                   <MarkedText
                     text={request.text}
                     words={result.words}
                     isSaved={(w) => saved.has(wordKey(w.word))}
                     onSave={save}
                   />
-                )}
-                <ul className="word-rows">
-                  {result.words.map((w) => {
-                    const isSaved = saved.has(wordKey(w.word))
-                    return (
-                      <li key={w.word} className="word-row">
-                        <div className="word-row-text">
-                          <div className="word-name-row">
-                            <span className={`word-name${isSaved ? ' word-name-saved' : ''}`}>{w.word}</span>
-                            <ListenButton text={w.word} />
+                  <ul className="word-rows">
+                    {result.words.map((w) => {
+                      const isSaved = saved.has(wordKey(w.word))
+                      return (
+                        <li key={w.word} className="word-row">
+                          <div className="word-row-text">
+                            <div className="word-name-row">
+                              <span className={`word-name${isSaved ? ' word-name-saved' : ''}`}>{w.word}</span>
+                              <ListenButton text={w.word} />
+                            </div>
+                            <p>{w.meaning}</p>
+                            <HelpLine help={w.help} field="meaning" />
                           </div>
-                          <p>{w.meaning}</p>
-                          <HelpLine help={w.help} field="meaning" />
-                        </div>
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          disabled={isSaved}
-                          aria-label={`${isSaved ? 'Saved' : 'Save'} ${w.word}`}
-                          onClick={(e) => save(w, e.currentTarget)}
-                        >
-                          {isSaved ? 'Saved' : 'Save'}
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
+                          <button
+                            type="button"
+                            className="btn btn-outline"
+                            disabled={isSaved}
+                            aria-label={`${isSaved ? 'Saved' : 'Save'} ${w.word}`}
+                            onClick={(e) => save(w, e.currentTarget)}
+                          >
+                            {isSaved ? 'Saved' : 'Save'}
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  </>
+                )}
               </ResultCard>
             )}
             <FollowUp

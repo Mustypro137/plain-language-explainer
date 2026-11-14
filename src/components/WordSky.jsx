@@ -1,8 +1,9 @@
-import { isDue } from '../lib/practice.js'
+import { isFading } from '../lib/practice.js'
 import { LEVEL_NAMES, skyLayout } from '../lib/sky.js'
 
 // My Words as a sky: a constellation per topic, a star per word. The bigger and fuller the
-// star, the better the word is known; a dashed ring means it is fading (due for review).
+// star, the better the word is known; a dashed ring means it is fading (practised before and
+// due for review again).
 // Every star is a real button, in reading order, so the sky works with a keyboard and a
 // screen reader; the List view shows the same words as text.
 const isNarrow = () => window.matchMedia?.('(max-width: 479px)').matches ?? false
@@ -21,7 +22,7 @@ export default function WordSky({ words, today, selectedId, onSelect }) {
               <polyline points={c.stars.map((s) => `${s.x},${s.y}`).join(' ')} />
             </svg>
             {c.stars.map(({ word: w, x, y }) => {
-              const due = isDue(w, today)
+              const due = isFading(w, today)
               const on = w.id === selectedId
               return (
                 <button
@@ -31,7 +32,7 @@ export default function WordSky({ words, today, selectedId, onSelect }) {
                   className={`star star-${w.box}${due ? ' star-due' : ''}${on ? ' star-on' : ''}`}
                   style={{ left: x, top: y }}
                   aria-pressed={on}
-                  aria-label={`${w.word}, ${LEVEL_NAMES[w.box]}${due ? ', due today' : ''}`}
+                  aria-label={`${w.word}, ${LEVEL_NAMES[w.box]}${due ? ', fading, due today' : ''}`}
                   onClick={() => onSelect(on ? null : w.id)}
                 >
                   <span className="star-dot" aria-hidden="true" />
@@ -57,7 +58,7 @@ export default function WordSky({ words, today, selectedId, onSelect }) {
         </li>
         <li>
           <span className="star-dot legend-due" />
-          fading, due today
+          fading, due again
         </li>
       </ul>
     </div>

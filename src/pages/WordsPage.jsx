@@ -4,14 +4,14 @@ import EmptyState from '../components/EmptyState.jsx'
 import HelpLine from '../components/HelpLine.jsx'
 import LevelDots from '../components/LevelDots.jsx'
 import ListenButton from '../components/ListenButton.jsx'
-import Streak from '../components/Streak.jsx'
 import { useToast } from '../components/Toast.jsx'
 import WordDetail from '../components/WordDetail.jsx'
 import WordForm from '../components/WordForm.jsx'
 import WordSky from '../components/WordSky.jsx'
-import { listPracticeDays } from '../lib/activityStore.js'
+import { listPracticeDays, streakLength } from '../lib/activityStore.js'
 import { MAX_FILE_BYTES, downloadBackup, readBackup } from '../lib/backup.js'
 import { dayKey, whenDue } from '../lib/days.js'
+import { isFading } from '../lib/practice.js'
 import { importHistory, listHistory } from '../lib/historyStore.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import { deleteWord, importWords, listWords, restoreWord, saveWord, updateWord } from '../lib/wordStore.js'
@@ -75,6 +75,8 @@ export default function WordsPage() {
   })
 
   const counts = topicCounts(words)
+  const fading = words.filter((w) => isFading(w, today)).length
+  const streak = streakLength(listPracticeDays(), today)
   // If the chosen topic has no words left (after a delete), show them all.
   const activeTopic = counts.some(([t]) => t === topic) ? topic : 'All'
   const needle = query.trim().toLowerCase()
@@ -263,17 +265,26 @@ export default function WordsPage() {
         />
       ) : (
         <>
-          <section className="stats" aria-label="Your progress">
-            <ul className="stat-list">
+          {/* One line instead of tiles and a card, so the words themselves come sooner. */}
+          <section className="words-summary" aria-label="Your progress">
+            <ul className="summary-list">
               {LEVELS.map(([box, label]) => (
-                <li key={box} className="stat">
+                <li key={box}>
                   <strong>{words.filter((w) => w.box === box).length}</strong> {label}
                 </li>
               ))}
+              {fading > 0 && (
+                <li className="summary-fading">
+                  <strong>{fading}</strong> fading
+                </li>
+              )}
+              {streak > 0 && (
+                <li className="summary-streak">
+                  <strong>{streak}</strong> {streak === 1 ? 'day' : 'days'} in a row
+                </li>
+              )}
             </ul>
           </section>
-
-          <Streak days={listPracticeDays()} today={today} />
 
           <div className="mode-switch view-switch" role="group" aria-label="View">
             <button type="button" className="btn" aria-pressed={view === 'list'} onClick={() => chooseView('list')}>

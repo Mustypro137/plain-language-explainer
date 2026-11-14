@@ -16,7 +16,8 @@ Reply with one JSON object and nothing else, with these keys:
 "words": up to 5 hard words from the text that a beginner should learn because they will meet them again,
   such as "callback", "dependency" or "undefined". Never include file names, paths, line numbers,
   names from the user's own code (their variables, functions or components),
-  or internal library names from a stack trace. An empty list is fine. Each word as
+  or internal library names from a stack trace, and never a word that appears only in the "at ..." lines
+  of a stack trace (like "hooks" from renderWithHooks). An empty list is fine. Each word as
   {"word", "meaning" (one simple sentence), "sentence" (the sentence from the text that uses it),
   "topic" (exactly one of: ${TOPICS.join(', ')})}. "sentence" is copied from the text, without its number.
 "lines": the text part by part, in order: a list of {"n" (the part number), "plain" (what that part means,

@@ -278,12 +278,28 @@ describe('review days and the streak', () => {
     expect(within(screen.getByText('later').closest('li')).getByText('Review in 3 days')).toBeInTheDocument()
   })
 
-  test('the streak shows with the words', () => {
+  test('the summary line shows the streak and the fading words', () => {
     seed('callback')
+    seed('promise')
     localStorage.setItem('ple.practice-days.v1', JSON.stringify(['2026-01-09']))
+    // promise was practised before and is due again; callback was never practised.
+    const words = JSON.parse(localStorage.getItem('ple.words.v1'))
+    localStorage.setItem(
+      'ple.words.v1',
+      JSON.stringify(words.map((w) => (w.word === 'promise' ? { ...w, due: '2026-01-05', interval: 1 } : w))),
+    )
     setup()
-    expect(screen.getByRole('heading', { level: 2, name: '1-day streak' })).toBeInTheDocument()
-    expect(screen.getByText('One round today makes it longer.')).toBeInTheDocument()
+    const summary = screen.getByRole('region', { name: 'Your progress' })
+    expect(within(summary).getByText(/in a row$/)).toHaveTextContent('1 day in a row')
+    expect(within(summary).getByText(/fading$/)).toHaveTextContent('1 fading')
+  })
+
+  test('the summary leaves out fading and the streak when there are none', () => {
+    seed('callback')
+    setup()
+    const summary = screen.getByRole('region', { name: 'Your progress' })
+    expect(within(summary).queryByText(/fading$/)).not.toBeInTheDocument()
+    expect(within(summary).queryByText(/in a row$/)).not.toBeInTheDocument()
   })
 })
 

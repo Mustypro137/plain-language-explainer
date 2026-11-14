@@ -331,15 +331,119 @@ a:hover {
   gap: 24px;
 }
 
-.explain-actions {
+/* Home: the headline says what the app does */
+.home-title {
+  font-size: clamp(30px, 4.2vw, 46px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+/* A returning visitor with fading words is invited to review them */
+.welcome-chip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.welcome-chip:hover {
+  border-color: var(--star);
+  color: var(--ink);
+}
+
+.welcome-dot {
+  width: 10px;
+  height: 10px;
+  border: 2px dashed var(--star);
+  border-radius: 50%;
+}
+
+/* The text box and its bar are one panel; the ring shows on the panel */
+.input-panel {
+  border: var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow: hidden;
+  transition: border-color var(--t-state) var(--ease);
+}
+
+.input-panel:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.input-panel .paste-box {
+  display: block;
+  border: 0;
+  border-radius: 0;
+}
+
+.input-panel .paste-box:focus-visible {
+  outline: none;
+}
+
+.input-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 16px;
+  gap: 8px 12px;
+  padding: 10px 12px 10px 16px;
+  border-top: var(--border);
+  background: var(--panel-2);
+}
+
+.type-chip {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.input-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--faint-ink);
+}
+
+.input-count.count-over {
+  color: var(--alert);
+}
+
+/* The shortcut hint and Explain stay together, at the right end of the bar */
+.input-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .key-hint {
-  font-size: 15px;
+  font-size: 14px;
+}
+
+.privacy-note {
+  font-size: 14px;
+}
+
+/* On a phone the Explain button takes the whole width of the bar */
+@media (max-width: 479px) {
+  .input-actions {
+    flex: 1 1 100%;
+  }
+
+  .input-bar .btn-primary {
+    flex: 1 1 auto;
+  }
 }
 
 /* Touch screens have no Ctrl key to press */
@@ -386,27 +490,110 @@ a:hover {
   scroll-margin-top: 16px;
 }
 
-/* The answer column before the first answer: a quiet outline of the five parts */
-.preview-list {
-  list-style: none;
-  margin: 0;
-  padding: 8px 24px;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
+/* The answer column before the first answer: one real line pair, then what comes with it */
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.preview-part {
+.preview-card {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
-  padding: 14px 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.demo-pair {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 2px 12px;
+  padding-bottom: 16px;
+  border-bottom: var(--border);
+}
+
+.demo-pair .line-orig {
+  font-size: 13px;
+}
+
+.demo-plain {
+  grid-column: 2;
+  margin: 0;
+}
+
+.preview-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   font-size: 16px;
 }
 
-.preview-part + .preview-part {
-  border-top: 1px solid var(--line);
+.preview-points li {
+  display: flex;
+  gap: 12px;
+}
+
+.preview-num {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* The visitor's sky, as a small night card that links to My Words */
+.sky-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  background: #0e1330;
+  color: #f3f1ff;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.sky-card:hover {
+  color: #ffffff;
+}
+
+.sky-card-stars {
+  position: relative;
+  flex: none;
+  width: 64px;
+  height: 40px;
+}
+
+.sky-card-stars span {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.sky-card-stars span:nth-child(1) {
+  left: 4px;
+  top: 22px;
+  width: 12px;
+  height: 12px;
+  background: #ffd166;
+  box-shadow: 0 0 10px #ffd166;
+}
+
+.sky-card-stars span:nth-child(2) {
+  left: 28px;
+  top: 4px;
+  width: 9px;
+  height: 9px;
+  background: #5eead4;
+  box-shadow: 0 0 8px #5eead4;
+}
+
+.sky-card-stars span:nth-child(3) {
+  left: 50px;
+  top: 24px;
+  width: 8px;
+  height: 8px;
+  border: 2px dashed #ff8fb1;
 }
 
 .paste-box {
@@ -435,15 +622,6 @@ a:hover {
   }
 }
 
-.paste-meta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 4px 8px;
-  padding-top: 4px;
-  font-size: 15px;
-  color: var(--soft-ink);
-}
 
 .count-over {
   margin: 0;
@@ -793,35 +971,7 @@ a:hover {
   gap: 12px;
 }
 
-/* My Words: progress and topic filter */
-.stat-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 14px 18px;
-  border: var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
-  color: var(--soft-ink);
-  font-size: 15px;
-}
-
-.stat strong {
-  color: var(--ink);
-  font-family: var(--font-heading);
-  font-size: 30px;
-  line-height: 1.1;
-}
-
+/* My Words: topic filter */
 .topic-filter {
   display: flex;
   flex-wrap: wrap;
@@ -862,6 +1012,119 @@ a:hover {
   font-family: var(--font-mono);
   font-size: 12px;
   white-space: nowrap;
+}
+
+/* Hard words as chips (answers with line by line) */
+.word-chips-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.word-chips-hint {
+  font-size: 14px;
+}
+
+.word-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.word-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: var(--border-strong);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color var(--t-press) var(--ease),
+    border-color var(--t-press) var(--ease);
+}
+
+.word-chip:hover {
+  border-color: var(--accent);
+}
+
+.word-chip-saved {
+  border-color: var(--star);
+  color: var(--star-text);
+  background: var(--star-soft);
+}
+
+.word-chip-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* A folded part of the answer (the practical example) */
+.fold summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 12px;
+  border: var(--border);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.fold summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold summary::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--t-state) var(--ease);
+}
+
+.fold[open] summary {
+  margin-bottom: 12px;
+}
+
+.fold[open] summary::before {
+  transform: rotate(45deg);
+}
+
+/* My Words: one summary line instead of tiles and a streak card */
+.summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  color: var(--soft-ink);
+}
+
+.summary-list strong {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  color: var(--ink);
+}
+
+.summary-fading strong {
+  color: var(--star-text);
 }
 
 /* Line by line: the user's text part by part, beside what each part means */
@@ -1371,6 +1634,24 @@ button.flashcard {
   background: var(--panel);
   color: var(--ink);
   font-weight: 700;
+}
+
+/* On a phone the three practice modes share one row across the page: three equal parts,
+   and a long name ("Multiple choice") breaks inside its own part instead of wrapping the switch */
+@media (max-width: 559px) {
+  .practice-focus .mode-switch {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .practice-focus .mode-switch .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 15px;
+    line-height: 1.2;
+    text-align: center;
+  }
 }
 
 /* Multiple choice */

@@ -451,12 +451,39 @@ describe('reusing History to save AI calls', () => {
 })
 
 describe('before the first answer', () => {
-  test('the answer column shows what the five parts will be', () => {
+  test('the answer column shows a line made plain and what else comes with it', () => {
     setup()
     const column = screen.getByRole('region', { name: 'What you will get' })
-    for (const part of ['In simple words', 'Why this happens', 'What to try next', 'Practical example', 'Hard words']) {
-      expect(within(column).getByText(part)).toBeInTheDocument()
-    }
+    expect(within(column).getByText('npm ERR! could not resolve')).toBeInTheDocument()
+    expect(within(column).getByText(/npm could not find package versions/)).toBeInTheDocument()
+    expect(within(column).getByText('Why it happens and what to try next')).toBeInTheDocument()
+    // No saved words yet: no sky card.
+    expect(within(column).queryByRole('link', { name: /in your sky/ })).not.toBeInTheDocument()
+  })
+
+  test('someone with saved words sees their sky, and fading words are offered for review', () => {
+    saveWord({ word: 'callback', meaning: 'm', sentence: 's' })
+    saveWord({ word: 'promise', meaning: 'm', sentence: 's' })
+    const words = JSON.parse(localStorage.getItem('ple.words.v1'))
+    localStorage.setItem('ple.words.v1', JSON.stringify(words.map((w, i) => (i === 0 ? { ...w, due: '2020-01-01', interval: 1 } : w))))
+    setup()
+    expect(screen.getByRole('link', { name: /2 words in your sky/ })).toHaveAttribute('href', '/words')
+    expect(screen.getByRole('link', { name: /Welcome back · 1 word is fading/ })).toHaveAttribute('href', '/practice')
+  })
+
+  test('no welcome chip when nothing is fading', () => {
+    saveWord({ word: 'callback', meaning: 'm', sentence: 's' })
+    setup()
+    expect(screen.queryByRole('link', { name: /Welcome back/ })).not.toBeInTheDocument()
+  })
+
+  test('the bar under the box guesses what was pasted, without asking the AI', async () => {
+    const user = setup()
+    expect(screen.queryByText(/^Looks like/)).not.toBeInTheDocument()
+    await user.click(screen.getByLabelText('Your text'))
+    await user.paste('npm ERR! code ERESOLVE\nnpm ERR! could not resolve')
+    expect(screen.getByText('Looks like an npm error · 2 lines')).toBeInTheDocument()
+    expect(explainText).not.toHaveBeenCalled()
   })
 
   test('the preview goes away when an answer is on its way', async () => {
@@ -520,8 +547,12 @@ describe('the examples', () => {
   test('words from an example can be saved', async () => {
     const user = setup()
     await user.click(example())
-    await user.click(screen.getByRole('button', { name: 'Save undefined' }))
+    // The example has line by line, so its hard words are chips: open one, then save it.
+    const chips = within(screen.getByRole('heading', { name: 'Hard words' }).closest('article'))
+    await user.click(chips.getByRole('button', { name: 'undefined' }))
+    await user.click(chips.getByRole('button', { name: 'Save undefined to My Words' }))
     expect(hasWord('undefined')).toBe(true)
+    expect(chips.getByRole('button', { name: 'undefined, saved' })).toBeInTheDocument()
   })
 
   test('Explain after an example asks the AI for real, and the example note goes', async () => {
@@ -782,7 +813,10 @@ describe('saved words point back to their explanation', () => {
   test('a word saved from an example has no source', async () => {
     const user = setup()
     await user.click(screen.getByRole('button', { name: SAMPLES[0].label }))
-    await user.click(screen.getByRole('button', { name: `Save ${SAMPLES[0].result.words[0].word}` }))
+    const word = SAMPLES[0].result.words[0].word
+    const chips = within(screen.getByRole('heading', { name: 'Hard words' }).closest('article'))
+    await user.click(chips.getByRole('button', { name: word }))
+    await user.click(chips.getByRole('button', { name: `Save ${word} to My Words` }))
     expect(listWords()[0].source).toBeUndefined()
   })
 })

@@ -17,8 +17,12 @@ export function flyStar(fromEl) {
   star.style.top = `${a.top + a.height / 2 - 8}px`
   document.body.append(star)
 
+  // The top bar scrolls away with the page. When "My Words" is out of sight, the star flies
+  // to the top edge of the screen above it instead of into nowhere.
+  const edge = 12
+  const toY = Math.min(Math.max(b.top + b.height / 2, edge), window.innerHeight - edge)
   const dx = b.left + b.width / 2 - (a.left + a.width / 2)
-  const dy = b.top + b.height / 2 - (a.top + a.height / 2)
+  const dy = toY - (a.top + a.height / 2)
   const flight = star.animate(
     [
       { transform: 'translate(0, 0) scale(1)', opacity: 1 },

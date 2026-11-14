@@ -31,6 +31,10 @@ export function schedule(word, knew, today) {
 // A word with no due day (never practised) is due now.
 export const isDue = (word, today) => !word.due || word.due <= today
 
+// "Fading": practised before and due again. A new word is due too, but it has not faded:
+// it was never learnt yet, so it shows as new rather than fading.
+export const isFading = (word, today) => Boolean(word.due) && word.due <= today
+
 // The soonest day after today when some word is due, and how many words are due then.
 export function nextReview(words, today) {
   const later = words.map((w) => w.due).filter((d) => d && d > today)
