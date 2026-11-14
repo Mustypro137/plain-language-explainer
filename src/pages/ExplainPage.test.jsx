@@ -6,6 +6,7 @@ import { askAbout, explainText } from '../lib/explainText.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
 import { addHistory, getHistoryItem, listHistory } from '../lib/historyStore.js'
 import { SAMPLES } from '../lib/samples.js'
+import { decodeShare, readShareHash } from '../lib/share.js'
 import { hasWord, listWords, saveWord } from '../lib/wordStore.js'
 import ExplainPage from './ExplainPage.jsx'
 
@@ -1053,4 +1054,68 @@ test('a word panel left open does not follow onto the next answer', async () => 
   expect(screen.getByText(/You saved this/)).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'A docs paragraph' }))
   expect(screen.queryByText(/You saved this/)).not.toBeInTheDocument()
+})
+
+describe('share', () => {
+  test('Share makes a link that holds the text and the answer, with a warning about what is in it', async () => {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user)
+    await user.click(await screen.findByRole('button', { name: 'Share' }))
+    expect(screen.getByText(/This link contains your text and the answer\. Nothing is stored on a server\. Check that your text has no passwords or keys\./)).toBeInTheDocument()
+    const box = await screen.findByLabelText('Link to this explanation')
+    expect(box.value).toMatch(new RegExp(`^${window.location.origin}/s#d=`))
+    const shared = await decodeShare(readShareHash(box.value.slice(box.value.indexOf('#'))))
+    expect(shared.text).toBe('some text')
+    expect(shared.result.explanation).toBe(errorData.explanation)
+  })
+
+  test('a new answer closes the share sheet, so an old link is never offered', async () => {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user)
+    await user.click(await screen.findByRole('button', { name: 'Share' }))
+    await screen.findByLabelText('Link to this explanation')
+    await user.click(screen.getByRole('button', { name: 'A docs paragraph' }))
+    expect(screen.queryByLabelText('Link to this explanation')).not.toBeInTheDocument()
+  })
+
+  test('the link box is described by the warning, and Share says which part it opens', async () => {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user)
+    const share = await screen.findByRole('button', { name: 'Share' })
+    await user.click(share)
+    const box = await screen.findByLabelText('Link to this explanation')
+    expect(box).toHaveAccessibleDescription(/passwords or keys/)
+    expect(share).toHaveAttribute('aria-controls', box.closest('.share-sheet').id)
+  })
+
+  test('if the link cannot be made, it says so', async () => {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user)
+    vi.stubGlobal('CompressionStream', class {
+      constructor() {
+        throw new Error('no')
+      }
+    })
+    try {
+      await user.click(await screen.findByRole('button', { name: 'Share' }))
+      expect(await screen.findByText('Could not make a link.')).toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  test('Copy link puts the link on the clipboard', async () => {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    const user = setup()
+    await submit(user)
+    await user.click(await screen.findByRole('button', { name: 'Share' }))
+    const box = await screen.findByLabelText('Link to this explanation')
+    await user.click(screen.getByRole('button', { name: 'Copy link' }))
+    expect(await navigator.clipboard.readText()).toBe(box.value)
+    expect(screen.getByRole('status')).toHaveTextContent('Link copied')
+  })
 })

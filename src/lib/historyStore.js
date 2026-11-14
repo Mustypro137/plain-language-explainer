@@ -1,5 +1,4 @@
-import { findLanguage } from '../../shared/languages.js'
-import { isOptionalHelp } from './help.js'
+import { isFollowUp, isLanguage, isLevel, isResult } from './answerShape.js'
 
 const KEY = 'ple.history.v1'
 
@@ -10,51 +9,15 @@ export const MAX_FOLLOW_UPS = 3
 
 const isText = (v) => typeof v === 'string'
 
-const isHardWord = (w) =>
-  w !== null &&
-  typeof w === 'object' &&
-  isText(w.word) &&
-  isText(w.meaning) &&
-  isText(w.sentence) &&
-  isOptionalHelp(w.help, ['meaning'])
+// "Check yourself": how many of the questions under the answer were right.
+const isCheck = (c) => c !== null && typeof c === 'object' && Number.isInteger(c.right) && Number.isInteger(c.total) && c.total >= 1 && c.right >= 0 && c.right <= c.total
 
-// "Line by line": parts "from" to "to" of the text, in plain English.
-const isLine = (l) =>
-  l !== null &&
-  typeof l === 'object' &&
-  Number.isInteger(l.from) &&
-  l.from >= 1 &&
-  Number.isInteger(l.to) &&
-  l.to >= l.from &&
-  isText(l.plain) &&
-  isOptionalHelp(l.help, ['plain'])
-
-function isResult(r) {
-  return (
-    r !== null &&
-    typeof r === 'object' &&
-    (r.kind === 'error' || r.kind === 'docs') &&
-    isText(r.explanation) &&
-    isText(r.why) &&
-    Array.isArray(r.steps) &&
-    r.steps.every(isText) &&
-    isText(r.example) &&
-    Array.isArray(r.words) &&
-    r.words.every(isHardWord) &&
-    // Answers saved before "line by line" have no lines; they show the five parts only.
-    (r.lines === undefined || (Array.isArray(r.lines) && r.lines.every(isLine))) &&
-    isOptionalHelp(r.help, ['explanation', 'why'])
-  )
+// A broken score is only a lost score: the entry itself is kept.
+function withoutBadCheck(h) {
+  if (h === null || typeof h !== 'object' || h.check === undefined || isCheck(h.check)) return h
+  const { check, ...rest } = h
+  return rest
 }
-
-// "simpler" or "detail" for "Not clear?" answers. Missing (entries saved before levels) means normal.
-const LEVELS = [undefined, null, 'simpler', 'detail']
-
-const isFollowUp = (f) =>
-  f !== null && typeof f === 'object' && isText(f.question) && isText(f.answer) && isOptionalHelp(f.help, ['answer'])
-
-// Missing language (entries saved before "Help in my language") means English only.
-const isLanguage = (code) => code === undefined || code === null || findLanguage(code) !== null
 
 function isItem(h) {
   return (
@@ -64,21 +27,11 @@ function isItem(h) {
     isText(h.text) &&
     isText(h.savedAt) &&
     !Number.isNaN(Date.parse(h.savedAt)) &&
-    LEVELS.includes(h.level) &&
+    isLevel(h.level) &&
     isLanguage(h.language) &&
     (h.followUps === undefined || (Array.isArray(h.followUps) && h.followUps.every(isFollowUp))) &&
     isResult(h.result)
   )
-}
-
-// "Check yourself": how many of the questions under the answer were right.
-const isCheck = (c) => c !== null && typeof c === 'object' && Number.isInteger(c.right) && Number.isInteger(c.total) && c.total >= 1 && c.right >= 0 && c.right <= c.total
-
-// A broken score is only a lost score: the entry itself is kept.
-function withoutBadCheck(h) {
-  if (h === null || typeof h !== 'object' || h.check === undefined || isCheck(h.check)) return h
-  const { check, ...rest } = h
-  return rest
 }
 
 export const levelOf = (item) => item.level ?? null

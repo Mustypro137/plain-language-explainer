@@ -31,6 +31,7 @@ import {
 } from '../lib/historyStore.js'
 import { getLanguage, setLanguage as storeLanguage } from '../lib/languageStore.js'
 import { SAMPLES } from '../lib/samples.js'
+import { encodeShare, shareUrl } from '../lib/share.js'
 import { flyStar } from '../lib/flyStar.js'
 import { usePageTitle } from '../lib/usePageTitle.js'
 import { isFading } from '../lib/practice.js'
@@ -111,6 +112,11 @@ export default function ExplainPage() {
   })
   // The visitor's saved words, so the ones in the text can be starred.
   const [myWords, setMyWords] = useState(listWords)
+  // "Share": { url, result } for the answer it was made for; null while closed. It shows only
+  // while that same answer is on screen, so a new answer never offers an old link.
+  const [shareFor, setShareFor] = useState(null)
+  const shareLink = shareFor?.result === result ? shareFor.url : null
+  const shareBoxRef = useRef(null)
   const [followUps, setFollowUps] = useState(() => (opened ? followUpsOf(opened) : []))
   // Set when the free AI limit is used up: { until (ms), total (seconds), limit }.
   const [wait, setWait] = useState(null)
@@ -288,6 +294,30 @@ export default function ExplainPage() {
     }
   }
 
+  async function toggleShare() {
+    if (shareLink !== null) {
+      setShareFor(null)
+      return
+    }
+    // Follow-up questions stay out, to keep the link short.
+    try {
+      const data = await encodeShare({ text: request.text, result, level: request.level, language: request.language })
+      setShareFor({ url: shareUrl(data), result })
+    } catch {
+      toast('Could not make a link.')
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(shareLink)
+      toast('Link copied')
+    } catch {
+      shareBoxRef.current?.select()
+      toast('Could not copy. The link is selected.')
+    }
+  }
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(formatExplanation(result, request.text))
@@ -421,7 +451,50 @@ export default function ExplainPage() {
               Copy explanation
             </button>
           )}
+          {result && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              aria-expanded={shareLink !== null}
+              aria-controls="share-sheet"
+              onClick={toggleShare}
+            >
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" />
+                <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
+              </svg>
+              Share
+            </button>
+          )}
         </div>
+
+        {result && shareLink !== null && (
+          <div className="share-sheet" id="share-sheet">
+            <p id="share-warning">
+              This link contains your text and the answer. Nothing is stored on a server. Check that your text has no
+              passwords or keys.
+            </p>
+            <div className="share-row">
+              <label className="visually-hidden" htmlFor="share-link">
+                Link to this explanation
+              </label>
+              <input
+                id="share-link"
+                ref={shareBoxRef}
+                className="share-link"
+                type="text"
+                readOnly
+                aria-describedby="share-warning"
+                value={shareLink}
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <button type="button" className="btn btn-primary" onClick={copyLink}>
+                Copy link
+              </button>
+            </div>
+            {shareLink.length > 8000 && <p className="soft">This link is long. Some chat apps cut long links.</p>}
+          </div>
+        )}
 
         {request && status !== 'idle' && (
           <LevelSlider

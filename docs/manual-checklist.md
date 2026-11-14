@@ -173,6 +173,13 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] With saved words that appear in a new text, they have a gold star in Line by line and "You know N words here" shows above the table; tapping one says "You saved this N days ago" (or today / yesterday).
 - [ ] With reduced motion turned on, the stars do not twinkle and the line does not fade.
 
+## Share an explanation
+
+- [ ] After an answer, Share opens a sheet that says "This link contains your text and the answer. Nothing is stored on a server. Check that your text has no passwords or keys." with the link and Copy link ("Link copied"). No request appears in the Network tab.
+- [ ] The link opens `/s` in a private window (no saved data): the banner "Shared explanation · read only", the answer with line by line, Save on the hard words (the word appears in My Words), Check yourself, and "Explain your own text". History stays empty.
+- [ ] Cutting the end off the link, or opening `/s` alone, shows "This link is broken or cut short".
+- [ ] A new answer closes the share sheet. A very long link adds "This link is long. Some chat apps cut long links."
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.

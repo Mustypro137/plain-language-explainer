@@ -38,7 +38,7 @@ npx vercel dev                             # app + /api on http://localhost:3000
 - The AI returns `lines: [{n, to?, plain, plain_help?}]`, which are stored as `{from, to, plain, help?}`.
 
 **Client (`src/`)**
-- Routes in `src/App.jsx`: `/` ExplainPage, `/words`, `/practice` (`?topic=`), `/history`, and a 404 page.
+- Routes in `src/App.jsx`: `/` ExplainPage, `/words`, `/practice` (`?topic=`), `/history`, `/s` (a shared explanation, read from the `#d=` hash by `src/lib/share.js`), and a 404 page.
 - `src/lib/explainText.js` is the API client. It tells the firewall's bare 429 apart from Groq's own limit; the UI shows a countdown for both.
 - **localStorage is touched only by the store modules**:
   - `wordStore.js`: `ple.words.v1`;
