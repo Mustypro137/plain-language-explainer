@@ -25,6 +25,13 @@ export function markWords(text, words) {
   return pieces
 }
 
+// The words markWords would mark in the text, each once, in the order they are first met.
+export function wordsIn(text, words) {
+  const found = []
+  for (const p of markWords(text, words)) if (p.word && !found.includes(p.word)) found.push(p.word)
+  return found
+}
+
 // "Fill the blank": the saved sentence in pieces, with every use of the word as a blank
 // ({ blank: true, text }). Null if the sentence does not use the word as it is saved.
 export function blankOut(sentence, word) {

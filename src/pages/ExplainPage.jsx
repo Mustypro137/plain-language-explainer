@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import CountdownRing from '../components/CountdownRing.jsx'
+import CheckYourself from '../components/CheckYourself.jsx'
 import ExplainPreview from '../components/ExplainPreview.jsx'
 import FollowUp from '../components/FollowUp.jsx'
 import HelpLine from '../components/HelpLine.jsx'
 import LevelSlider from '../components/LevelSlider.jsx'
-import LineByLine from '../components/LineByLine.jsx'
+import LineByLine, { buildRows } from '../components/LineByLine.jsx'
 import ListenButton from '../components/ListenButton.jsx'
 import WordChips from '../components/WordChips.jsx'
 import Loading from '../components/Loading.jsx'
@@ -26,6 +27,7 @@ import {
   getHistoryItem,
   languageOf,
   levelOf,
+  setCheck,
 } from '../lib/historyStore.js'
 import { getLanguage, setLanguage as storeLanguage } from '../lib/languageStore.js'
 import { SAMPLES } from '../lib/samples.js'
@@ -34,6 +36,7 @@ import { usePageTitle } from '../lib/usePageTitle.js'
 import { isFading } from '../lib/practice.js'
 import { hasWord, listWords, saveWord } from '../lib/wordStore.js'
 import { LANGUAGES } from '../../shared/languages.js'
+import { segmentText } from '../../shared/segments.js'
 
 const MAX_CHARS = 3000
 
@@ -106,12 +109,21 @@ export default function ExplainPage() {
     const today = dayKey()
     return { saved: words.length, fading: words.filter((w) => isFading(w, today)).length }
   })
+  // The visitor's saved words, so the ones in the text can be starred.
+  const [myWords, setMyWords] = useState(listWords)
   const [followUps, setFollowUps] = useState(() => (opened ? followUpsOf(opened) : []))
   // Set when the free AI limit is used up: { until (ms), total (seconds), limit }.
   const [wait, setWait] = useState(null)
   const [now, setNow] = useState(() => Date.now())
   // True while the answer on screen is a sample written in advance, not from the AI.
   const [isSample, setIsSample] = useState(false)
+  // The rows "Check yourself" asks about. Kept between renders so the questions stay put
+  // while the page updates around them (the countdown, a toast).
+  const answerText = request?.text
+  const checkRows = useMemo(
+    () => (result?.lines?.length > 0 && answerText ? buildRows(segmentText(answerText), result.lines) : []),
+    [result, answerText],
+  )
   const sectionRef = useRef(null)
   const headingRef = useRef(null)
   // Only move the screen and focus after the user asks for something, not on page load.
@@ -269,6 +281,7 @@ export default function ExplainPage() {
       return
     }
     setSaved((prev) => new Set(prev).add(wordKey(w.word)))
+    setMyWords(listWords())
     if (r.ok) {
       toast('Saved to My Words')
       flyStar(el)
@@ -480,9 +493,11 @@ export default function ExplainPage() {
             </ResultCard>
             {result.lines?.length > 0 && (
               <LineByLine
+                key={`lines-${entryId ?? 'none'}-${request.text}-${request.level}`}
                 text={request.text}
                 lines={result.lines}
                 words={result.words}
+                known={myWords}
                 isSaved={(w) => saved.has(wordKey(w.word))}
                 onSave={save}
               />
@@ -553,6 +568,12 @@ export default function ExplainPage() {
                 )}
               </ResultCard>
             )}
+            <CheckYourself
+              key={`check-${entryId ?? 'none'}-${request.text}-${request.level}`}
+              rows={checkRows}
+              words={result.words}
+              onDone={(score) => entryId && setCheck(entryId, score)}
+            />
             <FollowUp
               key={`${entryId ?? 'none'}-${request.text}-${request.level}`}
               items={followUps}

@@ -102,3 +102,60 @@ describe('History keeps line-by-line answers', () => {
     expect(listHistory()).toHaveLength(0)
   })
 })
+
+describe('stars in your text', () => {
+  const daysAgo = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString()
+  const starText = 'The Callback ran.\nx is undefined'
+  const starLines = [
+    { from: 1, to: 1, plain: 'A function ran.' },
+    { from: 2, to: 2, plain: 'x is not set.' },
+  ]
+  const callback = { id: 'c', word: 'callback', meaning: 'A function you pass in.', sentence: '', savedAt: daysAgo(9), box: 1 }
+  const undef = { id: 'u', word: 'undefined', meaning: 'Not set.', sentence: '', savedAt: daysAgo(1), box: 1 }
+
+  function showStars(known) {
+    render(<LineByLine text={starText} lines={starLines} words={words} known={known} isSaved={() => true} onSave={vi.fn()} />)
+    return userEvent.setup()
+  }
+
+  test('a saved word in the text gets a star and the count line says how many are known', () => {
+    showStars([callback])
+    expect(screen.getByRole('button', { name: /^Callback, saved$/ })).toBeInTheDocument()
+    expect(screen.getByText('You know 1 word here')).toBeInTheDocument()
+  })
+
+  test('a saved hard word is marked once, with the star', () => {
+    showStars([callback, undef])
+    expect(screen.getAllByRole('button', { name: /undefined/ })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: /^undefined, saved$/ })).toBeInTheDocument()
+    expect(screen.getByText('You know 2 words here')).toBeInTheDocument()
+  })
+
+  test('tapping a saved word shows its own meaning and when it was saved', async () => {
+    const user = showStars([callback])
+    await user.click(screen.getByRole('button', { name: /^Callback, saved$/ }))
+    expect(screen.getByText('A function you pass in.')).toBeInTheDocument()
+    expect(screen.getByText('You saved this 9 days ago')).toBeInTheDocument()
+  })
+
+  test('a word saved yesterday says yesterday', async () => {
+    const user = showStars([undef])
+    await user.click(screen.getByRole('button', { name: /^undefined, saved$/ }))
+    expect(screen.getByText('You saved this yesterday')).toBeInTheDocument()
+  })
+
+  test('no saved words in the text, no count line', () => {
+    showStars([])
+    expect(screen.queryByText(/You know/)).not.toBeInTheDocument()
+  })
+})
+
+describe('stars count', () => {
+  test('a saved word inside a longer hard word is not counted, since it gets no star', () => {
+    const hard = [{ word: 'peer dependency', meaning: 'A package you install yourself.', sentence: '' }]
+    const saved = [{ id: 'd', word: 'dependency', meaning: 'm', sentence: '', savedAt: new Date().toISOString(), box: 1 }]
+    render(<LineByLine text="npm ERR! peer dependency" lines={[{ from: 1, to: 1, plain: 'p' }]} words={hard} known={saved} isSaved={() => false} onSave={vi.fn()} />)
+    expect(screen.queryByText(/You know/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /saved$/ })).not.toBeInTheDocument()
+  })
+})

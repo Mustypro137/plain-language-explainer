@@ -71,6 +71,16 @@ function isItem(h) {
   )
 }
 
+// "Check yourself": how many of the questions under the answer were right.
+const isCheck = (c) => c !== null && typeof c === 'object' && Number.isInteger(c.right) && Number.isInteger(c.total) && c.total >= 1 && c.right >= 0 && c.right <= c.total
+
+// A broken score is only a lost score: the entry itself is kept.
+function withoutBadCheck(h) {
+  if (h === null || typeof h !== 'object' || h.check === undefined || isCheck(h.check)) return h
+  const { check, ...rest } = h
+  return rest
+}
+
 export const levelOf = (item) => item.level ?? null
 export const languageOf = (item) => item.language ?? null
 export const followUpsOf = (item) => item.followUps ?? []
@@ -78,7 +88,7 @@ export const followUpsOf = (item) => item.followUps ?? []
 function read() {
   try {
     const parsed = JSON.parse(localStorage.getItem(KEY))
-    return Array.isArray(parsed) ? parsed.filter(isItem) : []
+    return Array.isArray(parsed) ? parsed.map(withoutBadCheck).filter(isItem) : []
   } catch {
     return []
   }
@@ -129,6 +139,15 @@ export function addFollowUp(id, followUp) {
   if (!item || !isFollowUp(followUp) || followUpsOf(item).length >= MAX_FOLLOW_UPS) return false
   const { question, answer, help } = followUp
   item.followUps = [...followUpsOf(item), { question, answer, ...(help && { help }) }]
+  return write(items)
+}
+
+// Keeps the score of the last "Check yourself" round on an entry. False if it is gone or the score is not possible.
+export function setCheck(id, { right, total } = {}) {
+  const items = read()
+  const item = items.find((h) => h.id === id)
+  if (!item || !isCheck({ right, total })) return false
+  item.check = { right, total }
   return write(items)
 }
 

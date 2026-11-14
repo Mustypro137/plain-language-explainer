@@ -59,6 +59,7 @@ function details(h, savedFrom) {
   if (questions > 0) parts.push(count(questions, 'question', 'questions'))
   const saved = savedFrom.get(h.id) ?? 0
   if (saved > 0) parts.push(`${count(saved, 'word', 'words')} saved`)
+  if (h.check) parts.push(`Checked ${h.check.right} of ${h.check.total}`)
   return parts.join(' · ')
 }
 

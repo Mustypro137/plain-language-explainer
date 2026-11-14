@@ -1,4 +1,4 @@
-import { markWords } from './markWords.js'
+import { markWords, wordsIn } from './markWords.js'
 
 const w = (word) => ({ word, meaning: `${word} means`, sentence: 's' })
 const marked = (pieces) => pieces.filter((p) => p.word).map((p) => [p.text, p.word.word])
@@ -40,3 +40,10 @@ test('a word not found in the text is not marked', () => {
 })
 
 test('no words gives the whole text as one piece', () => expect(markWords('hello', [])).toEqual([{ text: 'hello' }]))
+
+test('wordsIn lists each word found once, in the order met, with the longer match winning', () => {
+  const found = wordsIn('Use node.js and C++, then node.js again, in nodejs', [{ word: 'node.js' }, { word: 'c++' }, { word: 'js' }])
+  expect(found.map((w) => w.word)).toEqual(['node.js', 'c++'])
+})
+
+test('wordsIn finds nothing in a text without the words', () => expect(wordsIn('hello', [{ word: 'map' }])).toEqual([]))

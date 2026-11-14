@@ -2050,6 +2050,43 @@ kbd {
   cursor: pointer;
 }
 
+/* A saved word that is not one of this answer's hard words: no dotted line, just its star */
+.mark-plain {
+  text-decoration: none;
+}
+
+.mark-star {
+  display: inline-block;
+  margin-left: 1px;
+  color: var(--star);
+  font-size: 0.7em;
+  vertical-align: super;
+  line-height: 1;
+}
+
+.known-count {
+  margin: 0;
+  color: var(--soft-ink);
+  font-size: 14px;
+}
+
+.known-count .mark-star {
+  vertical-align: baseline;
+  font-size: 1em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mark-known .mark-star {
+    animation: star-twinkle 600ms var(--ease) 200ms 1;
+  }
+
+  @keyframes star-twinkle {
+    50% {
+      transform: scale(1.35);
+    }
+  }
+}
+
 .mark:hover,
 .mark-on {
   background: var(--accent-soft);
@@ -2809,5 +2846,96 @@ select.search-box {
 @media (prefers-reduced-motion: reduce) {
   .confetti {
     display: none;
+  }
+}
+
+/* Check yourself: questions about the answer above, at the foot of the answer */
+.check-card {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.check-card .choice-list {
+  width: 100%;
+}
+
+.check-question {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  max-width: 100%;
+}
+
+/* Focus is moved here for screen readers; it is not something to press */
+.check-question:focus,
+.check-score:focus {
+  outline: none;
+}
+
+.check-count {
+  margin: 0;
+  color: var(--faint-ink);
+  font-size: 14px;
+}
+
+.check-line {
+  max-width: 100%;
+  padding: 6px 10px;
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.check-card .choice-prompt,
+.check-card .choice-result,
+.check-card .flashcard-word {
+  margin: 0;
+}
+
+.check-card .choice-result:empty {
+  display: none;
+}
+
+.check-result {
+  display: grid;
+  gap: 12px;
+}
+
+.check-score {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 22px;
+}
+
+.check-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* A line of the table lights up when the check points at it */
+.line-row-flash {
+  background: var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .line-row-flash {
+    animation: line-flash 1200ms var(--ease) both;
+  }
+
+  @keyframes line-flash {
+    0%,
+    40% {
+      background: var(--accent-soft);
+    }
+
+    100% {
+      background: transparent;
+    }
   }
 }

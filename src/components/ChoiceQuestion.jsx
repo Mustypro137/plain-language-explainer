@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import ChoiceList, { isPlainKey } from './ChoiceList.jsx'
 import ListenButton from './ListenButton.jsx'
 
 // One multiple-choice question. Give it a new `key` for each card so the pick resets.
@@ -17,24 +18,19 @@ export default function ChoiceQuestion({ card, choices, onAnswer, onNext }) {
     if (answered) nextRef.current?.focus()
   }, [answered])
 
+  // Enter goes on to the next card once this one is answered.
   useEffect(() => {
+    if (!answered) return undefined
     function onKeyDown(e) {
-      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
-      const target = e.target instanceof Element ? e.target : null
-      if (target?.closest('input, textarea, select, [contenteditable]')) return
-      if (!answered) {
-        const n = Number(e.key)
-        if (Number.isInteger(n) && n >= 1 && n <= choices.length) pick(n - 1)
-      } else if (e.key === 'Enter' && !target?.closest('a, button')) {
-        e.preventDefault()
-        onNext()
-      }
+      if (!isPlainKey(e) || e.key !== 'Enter') return
+      if (e.target instanceof Element && e.target.closest('a, button')) return
+      e.preventDefault()
+      onNext()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  })
+  }, [answered, onNext])
 
-  const stateOf = (c, i) => (!answered ? '' : c.correct ? 'correct' : i === picked ? 'wrong' : 'other')
   const result = !answered ? '' : choices[picked].correct ? 'Correct!' : 'Not quite. The right meaning is marked Correct.'
 
   return (
@@ -47,28 +43,7 @@ export default function ChoiceQuestion({ card, choices, onAnswer, onNext }) {
         <p className="choice-prompt">Which meaning is right?</p>
       </section>
 
-      <ol className="choice-list" aria-label="Choices">
-        {choices.map((c, i) => {
-          const state = stateOf(c, i)
-          return (
-            <li key={i}>
-              <button
-                type="button"
-                className={`btn choice${state ? ` choice-${state}` : ''}`}
-                aria-disabled={answered || undefined}
-                onClick={() => pick(i)}
-              >
-                <kbd>{i + 1}</kbd>
-                <span className="choice-text">
-                  {state === 'correct' && <strong className="choice-tag">Correct</strong>}
-                  {state === 'wrong' && <strong className="choice-tag">Not this one</strong>}
-                  {c.meaning}
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ol>
+      <ChoiceList choices={choices.map((c) => ({ text: c.meaning, correct: c.correct }))} picked={picked} onPick={pick} />
 
       <p role="status" className="choice-result">
         {result}
