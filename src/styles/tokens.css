@@ -55,6 +55,15 @@
   --t-state: 200ms;
   --t-enter: 320ms;
   --t-star: 600ms;
+  /* How far things move. "Reduce motion" sets these to 0, so every entrance becomes a short fade. */
+  --rise: 8px; /* entrances */
+  --rise-small: 6px; /* a new question, the share sheet */
+  --plain-x: -8px; /* a plain sentence arriving from its line */
+  --plain-y: 0px;
+  --toast-y: 16px;
+  --sheet-scale: 0.98;
+  --stagger: 50ms;
+  --press-scale: 0.97;
 
   color-scheme: light;
 }

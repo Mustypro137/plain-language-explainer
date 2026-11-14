@@ -34,7 +34,8 @@ export function buildRows(parts, lines) {
 // are dotted; a tap opens the word below the table.
 // known: the visitor's saved words. Those in the text get a star, and the line above the
 // table says how many of them are here.
-export default function LineByLine({ text, lines, words, known = [], isSaved, onSave }) {
+// reveal: a new answer, whose plain sentences arrive row by row (CSS reads --i for the order).
+export default function LineByLine({ text, lines, words, known = [], isSaved, onSave, reveal = false }) {
   const [selected, setSelected] = useState(null)
   const id = useId()
   // Worked out once per answer, not on every keystroke: only the saved words that occur in this
@@ -55,7 +56,7 @@ export default function LineByLine({ text, lines, words, known = [], isSaved, on
   const currentSaved = current ? savedByKey.get(keyOf(current.word)) : null
 
   return (
-    <section className="card lines" aria-labelledby={`${id}-title`}>
+    <section className={`card lines${reveal ? ' lines-reveal' : ''}`} aria-labelledby={`${id}-title`}>
       <div className="lines-top">
         <h3 id={`${id}-title`} className="label-chip">
           Line by line
@@ -74,7 +75,12 @@ export default function LineByLine({ text, lines, words, known = [], isSaved, on
       </div>
       <ol className="lines-list">
         {rows.map((row, r) => (
-          <li key={row.from} data-line={row.from} className={`line-row${row.plain ? '' : ' line-row-bare'}`}>
+          <li
+            key={row.from}
+            data-line={row.from}
+            className={`line-row${row.plain ? '' : ' line-row-bare'}`}
+            style={{ '--i': r }}
+          >
             <span className="line-num" aria-hidden="true">
               {row.to > row.from ? `${num(row.from)}–${num(row.to)}` : num(row.from)}
             </span>

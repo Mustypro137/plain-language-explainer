@@ -180,9 +180,17 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] Cutting the end off the link, or opening `/s` alone, shows "This link is broken or cut short".
 - [ ] A new answer closes the share sheet. A very long link adds "This link is long. Some chat apps cut long links."
 
+## Motion
+
+- [ ] Explain an example: the plain sentences in Line by line arrive one row after another from the left (from above on a phone), settled within about half a second. Opening the same answer from History shows the table at once.
+- [ ] Save a word: the toast rises from the bottom and slides back down when it closes. Pointing at it while it leaves brings it back.
+- [ ] Share opens its sheet growing from the Share button. Each Check yourself question fades up; the result shows one star per question, lighting up in turn, and the last one pops on 3 of 3.
+- [ ] "Show the example" opens smoothly in Chrome or Edge (and simply opens elsewhere). Chips and dotted words shrink slightly while pressed.
+- [ ] With reduce motion on (system setting, or DevTools > Rendering): nothing slides, scales or staggers; entrances are short fades, stars appear already lit, and nothing stays invisible.
+
 ## Polish checks (from Task 7)
 
-- [ ] With the system "reduce motion" setting on, nothing animates and the flashcard still shows its back.
+- [ ] With the system "reduce motion" setting on, nothing slides, flips or scales (entrances are short fades) and the flashcard still shows its back.
 - [ ] Dark mode: with the device set to dark and nothing chosen, the app opens dark with no white flash. The sun/moon button switches theme, the choice survives a reload, and every page passes the contrast check in both themes.
 - [ ] Every text and button colour pair passes WCAG AA (use the browser's contrast tool).
 - [ ] Every control shows the focus ring and works with the keyboard.

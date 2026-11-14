@@ -1119,3 +1119,29 @@ describe('share', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Link copied')
   })
 })
+
+describe('line-by-line reveal', () => {
+  test('an example answer is revealed row by row', async () => {
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'An npm error' }))
+    expect(screen.getByRole('region', { name: 'Line by line' })).toHaveClass('lines-reveal')
+  })
+
+  test('a kept answer for the same text is a new answer on screen, so it is revealed', async () => {
+    addHistory({ text: 'a\nb', result: { ...errorData, lines: [{ from: 1, to: 1, plain: 'A.' }, { from: 2, to: 2, plain: 'B.' }] } })
+    const user = setup()
+    await user.type(screen.getByLabelText('Your text'), 'a{Shift>}{Enter}{/Shift}b')
+    await user.click(explainButton())
+    expect(await screen.findByRole('region', { name: 'Line by line' })).toHaveClass('lines-reveal')
+    expect(explainText).not.toHaveBeenCalled()
+  })
+
+  test('an answer opened from History is shown at once', () => {
+    const item = addHistory({
+      text: 'a\nb\nc',
+      result: { ...errorData, lines: [{ from: 1, to: 1, plain: 'A.' }, { from: 2, to: 2, plain: 'B.' }] },
+    })
+    setup(`/?item=${item.id}`)
+    expect(screen.getByRole('region', { name: 'Line by line' })).not.toHaveClass('lines-reveal')
+  })
+})

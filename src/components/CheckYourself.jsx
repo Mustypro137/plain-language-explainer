@@ -98,7 +98,8 @@ export default function CheckYourself({ rows, words, onDone, random = Math.rando
 
       {q && (
         <>
-          <div className="check-question" data-testid="check-question" tabIndex={-1} ref={headRef}>
+          {/* Keyed, so each question is a new element and its entrance plays. */}
+          <div key={`q-${round}-${step}`} className="check-question" data-testid="check-question" tabIndex={-1} ref={headRef}>
             <p className="check-count">
               Question {step + 1} of {total}
             </p>
@@ -118,7 +119,7 @@ export default function CheckYourself({ rows, words, onDone, random = Math.rando
               </>
             )}
           </div>
-          <ChoiceList key={`${round}-${step}`} choices={q.choices} picked={picked} onPick={pick} />
+          <ChoiceList key={`c-${round}-${step}`} choices={q.choices} picked={picked} onPick={pick} />
         </>
       )}
 
@@ -139,6 +140,16 @@ export default function CheckYourself({ rows, words, onDone, random = Math.rando
             <strong>
               {right} of {total}
             </strong>
+            {/* The score as stars, like the progress in Practice; they light up one after another. */}
+            <span className="check-stars" aria-hidden="true">
+              {answers.map((ok, i) => (
+                <span
+                  key={i}
+                  className={`sp${ok ? ' sp-right' : ''}${right === total && i === total - 1 ? ' sp-pop' : ''}`}
+                  style={{ '--i': i }}
+                />
+              ))}
+            </span>
           </p>
           <div className="check-actions">
             {missed && (

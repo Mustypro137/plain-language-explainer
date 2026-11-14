@@ -112,6 +112,9 @@ export default function ExplainPage() {
   })
   // The visitor's saved words, so the ones in the text can be starred.
   const [myWords, setMyWords] = useState(listWords)
+  // True for an answer that has just arrived (so line by line plays its reveal); false for one
+  // reopened from History.
+  const [freshAnswer, setFreshAnswer] = useState(false)
   // "Share": { url, result } for the answer it was made for; null while closed. It shows only
   // while that same answer is on screen, so a new answer never offers an old link.
   const [shareFor, setShareFor] = useState(null)
@@ -198,6 +201,7 @@ export default function ExplainPage() {
     setEntryId(null)
     setFollowUps([])
     setResult(sample.result)
+    setFreshAnswer(true)
     setSaved(savedKeys(sample.result.words))
     setError(null)
     setWait(null)
@@ -214,6 +218,7 @@ export default function ExplainPage() {
     setEntryId(item.id)
     setFollowUps(followUpsOf(item))
     setResult(item.result)
+    setFreshAnswer(true)
     setSaved(savedKeys(item.result.words))
     setError(null)
     setIsSample(false)
@@ -249,6 +254,7 @@ export default function ExplainPage() {
       setEntryId(kept?.id ?? null)
       setSaved(savedKeys(answer.data.words))
       setResult(answer.data)
+      setFreshAnswer(true)
       setStatus('done')
     } else {
       if (answer.error === 'busy' && answer.retryAfter) startWait(answer)
@@ -571,6 +577,7 @@ export default function ExplainPage() {
                 lines={result.lines}
                 words={result.words}
                 known={myWords}
+                reveal={freshAnswer}
                 isSaved={(w) => saved.has(wordKey(w.word))}
                 onSave={save}
               />

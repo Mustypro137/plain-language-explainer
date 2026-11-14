@@ -3,18 +3,32 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 const TOAST_MS = 3000
 // A toast with a button (such as Undo) stays longer, so there is time to reach it.
 const ACTION_MS = 6000
+// The last part of that time is spent sliding out, so the total time on screen does not change.
+const LEAVE_MS = 150
 const ToastContext = createContext(() => {})
 
 // toast('Saved') shows a message. toast('Deleted', { action: { label: 'Undo', onClick } }) adds a button.
 export function ToastProvider({ children }) {
   const [toast, setToast] = useState(null) // { id, text, action }
+  const [leaving, setLeaving] = useState(false)
   const timer = useRef()
+  const leaveTimer = useRef()
   const nextId = useRef(0)
 
-  const startTimer = useCallback((ms) => {
+  const stopTimers = useCallback(() => {
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => setToast(null), ms)
+    clearTimeout(leaveTimer.current)
   }, [])
+
+  const startTimer = useCallback(
+    (ms) => {
+      stopTimers()
+      setLeaving(false)
+      leaveTimer.current = setTimeout(() => setLeaving(true), ms - LEAVE_MS)
+      timer.current = setTimeout(() => setToast(null), ms)
+    },
+    [stopTimers],
+  )
 
   const show = useCallback(
     (text, { action } = {}) => {
@@ -25,14 +39,17 @@ export function ToastProvider({ children }) {
     [startTimer],
   )
 
-  useEffect(() => () => clearTimeout(timer.current), [])
+  useEffect(() => stopTimers, [stopTimers])
 
-  // While the pointer or the keyboard is on the toast, it does not close.
-  const pause = () => clearTimeout(timer.current)
+  // While the pointer or the keyboard is on the toast, it does not close (and comes back if leaving).
+  const pause = () => {
+    stopTimers()
+    setLeaving(false)
+  }
   const resume = () => startTimer(toast?.action ? ACTION_MS : TOAST_MS)
 
   function act() {
-    clearTimeout(timer.current)
+    stopTimers()
     setToast(null)
     toast.action.onClick()
   }
@@ -45,7 +62,7 @@ export function ToastProvider({ children }) {
         {toast && (
           <div
             key={toast.id}
-            className="toast"
+            className={`toast${leaving ? ' toast-leaving' : ''}`}
             onMouseEnter={pause}
             onMouseLeave={resume}
             onFocus={pause}

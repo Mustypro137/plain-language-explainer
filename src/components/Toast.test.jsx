@@ -95,3 +95,29 @@ describe('a toast with an action', () => {
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument()
   })
 })
+
+describe('leaving', () => {
+  test('a toast starts to leave 150ms before it closes, then closes on time', () => {
+    const button = setup()
+    act(() => button.click())
+    const toast = screen.getByRole('status').firstChild
+    act(() => vi.advanceTimersByTime(2849))
+    expect(toast).not.toHaveClass('toast-leaving')
+    act(() => vi.advanceTimersByTime(1))
+    expect(toast).toHaveClass('toast-leaving')
+    act(() => vi.advanceTimersByTime(150))
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+  })
+
+  test('pointing at a leaving toast brings it back, and it stays', () => {
+    const button = setup()
+    act(() => button.click())
+    act(() => vi.advanceTimersByTime(2900))
+    const toast = screen.getByRole('status').firstChild
+    expect(toast).toHaveClass('toast-leaving')
+    fireEvent.mouseEnter(toast)
+    expect(toast).not.toHaveClass('toast-leaving')
+    act(() => vi.advanceTimersByTime(10000))
+    expect(screen.getByRole('status')).toHaveTextContent('Saved to My Words')
+  })
+})
