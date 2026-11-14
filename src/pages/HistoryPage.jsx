@@ -8,6 +8,7 @@ import {
   MAX_ITEMS,
   clearHistory,
   deleteHistoryItem,
+  chainLength,
   followUpsOf,
   languageOf,
   levelOf,
@@ -49,7 +50,7 @@ export function groupByDay(items, today) {
 const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
 
 // One line of what is special about this entry: level, language, questions asked, words kept.
-function details(h, savedFrom) {
+function details(h, savedFrom, items) {
   const parts = []
   const level = levelOf(h)
   if (level) parts.push(LEVEL_NAMES[level])
@@ -60,6 +61,9 @@ function details(h, savedFrom) {
   const saved = savedFrom.get(h.id) ?? 0
   if (saved > 0) parts.push(`${count(saved, 'word', 'words')} saved`)
   if (h.check) parts.push(`Checked ${h.check.right} of ${h.check.total}`)
+  const tries = chainLength(h, items)
+  if (tries > 1) parts.push(`Try ${tries}`)
+  if (h.solved) parts.push('Solved')
   return parts.join(' · ')
 }
 
@@ -163,7 +167,7 @@ export default function HistoryPage() {
                     const line = firstLine(h.text)
                     const name = shortName(line)
                     const isError = h.result.kind === 'error'
-                    const extra = details(h, savedFrom)
+                    const extra = details(h, savedFrom, items)
                     return (
                       <li key={h.id} className="history-row-item">
                         <span className={`kind-tag ${isError ? 'kind-error' : 'kind-docs'}`}>

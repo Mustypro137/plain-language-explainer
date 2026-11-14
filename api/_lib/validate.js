@@ -143,3 +143,34 @@ export function parseFollowUp(raw, language = null) {
   if (!data || !isText(data.answer)) return null
   return { answer: data.answer.trim(), ...helpOf(language, { answer: data.answer_help }) }
 }
+
+// "Ask about a word": one word from one line of the pasted text. The line is checked against the
+// text (each of its lines must be in it) so the AI only ever sees the user's own words.
+const MAX_LINE = 500
+const MAX_WORD_MEANING = 300
+const WORD = /^[A-Za-z][\w'’.-]{1,39}$/
+
+export function validateWordQuestion(body) {
+  const text = validateText(body?.text)
+  if (!text.ok) return text
+  const word = typeof body?.word === 'string' ? body.word.trim() : ''
+  const line = typeof body?.line === 'string' ? body.line.trim() : ''
+  const bad = { ok: false, error: 'bad_question' }
+  if (!WORD.test(word) || line === '' || line.length > MAX_LINE) return bad
+  if (!line.split('\n').every((l) => text.text.includes(l.trim()))) return bad
+  if (!line.toLowerCase().includes(word.toLowerCase())) return bad
+  return { ok: true, text: text.text, line, word }
+}
+
+// The AI's meaning, as a hard word: the line becomes its sentence (so Fill the blank works).
+export function parseWordAnswer(raw, language, { word, line }) {
+  const data = parseJson(raw)
+  if (!data || !isText(data.meaning) || data.meaning.trim().length > MAX_WORD_MEANING) return null
+  return {
+    word,
+    meaning: data.meaning.trim(),
+    sentence: line,
+    topic: normaliseTopic(data.topic),
+    ...(String(data.meaning_help ?? '').length <= MAX_WORD_MEANING && helpOf(language, { meaning: data.meaning_help })),
+  }
+}

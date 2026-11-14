@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import CountdownRing from '../components/CountdownRing.jsx'
 import CheckYourself from '../components/CheckYourself.jsx'
 import ExplainPreview from '../components/ExplainPreview.jsx'
+import FixIt, { ChangedStrip } from '../components/FixIt.jsx'
 import FollowUp from '../components/FollowUp.jsx'
 import HelpLine from '../components/HelpLine.jsx'
 import LevelSlider from '../components/LevelSlider.jsx'
@@ -14,20 +15,25 @@ import MarkedText from '../components/MarkedText.jsx'
 import ResultCard from '../components/ResultCard.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { dayKey } from '../lib/days.js'
+import { compareErrors } from '../lib/compareErrors.js'
 import { describeText } from '../lib/describeText.js'
-import { askAbout, explainText } from '../lib/explainText.js'
+import { askAbout, askWord, explainText } from '../lib/explainText.js'
 import { formatDate } from '../lib/formatDate.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
 import { formatWait } from '../lib/formatWait.js'
 import {
+  addExtraWord,
   addFollowUp,
   addHistory,
+  MAX_EXTRA_WORDS,
   findHistory,
   followUpsOf,
   getHistoryItem,
   languageOf,
   levelOf,
   setCheck,
+  setDone as saveDone,
+  setSolved as saveSolved,
 } from '../lib/historyStore.js'
 import { getLanguage, setLanguage as storeLanguage } from '../lib/languageStore.js'
 import { SAMPLES } from '../lib/samples.js'
@@ -120,12 +126,83 @@ export default function ExplainPage() {
   const [shareFor, setShareFor] = useState(null)
   const shareLink = shareFor?.result === result ? shareFor.url : null
   const shareBoxRef = useRef(null)
+  // Fix-it loop: the ticked steps and "solved" for the answer on screen, and the entry the next
+  // explanation will follow after "Still broken?" (null when none is waiting).
+  const [done, setDoneState] = useState([])
+  const [solved, setSolvedState] = useState(false)
+  const [pendingAfter, setPendingAfter] = useState(null)
+  // "Ask about a word": the words asked about for the answer on screen (kept with its entry).
+  const [extraWords, setExtraWords] = useState([])
+  const pasteRef = useRef(null)
   const [followUps, setFollowUps] = useState(() => (opened ? followUpsOf(opened) : []))
   // Set when the free AI limit is used up: { until (ms), total (seconds), limit }.
   const [wait, setWait] = useState(null)
   const [now, setNow] = useState(() => Date.now())
   // True while the answer on screen is a sample written in advance, not from the AI.
   const [isSample, setIsSample] = useState(false)
+  useEffect(() => {
+    const entry = entryId ? getHistoryItem(entryId) : null
+    setDoneState(entry?.done ?? [])
+    setSolvedState(entry?.solved === true)
+    setExtraWords(entry?.extraWords ?? [])
+  }, [entryId, result])
+
+  // The hard words and the words asked about, marked together in the text.
+  const tableWords = useMemo(() => (result ? [...result.words, ...extraWords] : []), [result, extraWords])
+
+  // The lookups still on their way for the answer on screen, by word: a word tapped again shares
+  // its call, and these count towards the five so fast taps never ask more.
+  const lookups = useRef(new Map())
+  useEffect(() => {
+    lookups.current = new Map()
+  }, [result])
+
+  function askAboutWord(word, line) {
+    if (waiting) return Promise.resolve({ ok: false, message: `${LIMIT_TITLES[wait.limit ?? 'unknown']} You can ask again in ${formatWait(remaining)}.` })
+    const key = word.trim().toLowerCase()
+    const pending = lookups.current
+    if (pending.has(key)) return pending.get(key)
+    if (extraWords.length + pending.size >= MAX_EXTRA_WORDS) return Promise.resolve({ ok: false, message: 'You have asked about 5 words for this answer.' })
+    const about = result
+    const lookup = lookUp(word, line, about).finally(() => pending.delete(key))
+    pending.set(key, lookup)
+    return lookup
+  }
+
+  async function lookUp(word, line, about) {
+    const r = await askWord({ text: request.text, line, word, language })
+    // A new answer came meanwhile: this word belongs to the old one.
+    if (resultRef.current !== about) return { ok: false, message: '' }
+    if (!r.ok) {
+      if (r.error === 'busy' && r.retryAfter) {
+        startWait(r)
+        return { ok: false, message: `${LIMIT_TITLES[r.limit ?? 'unknown']} You can ask again in ${formatWait(r.retryAfter)}.` }
+      }
+      const message =
+        r.error === 'busy'
+          ? 'The AI is busy. Try again in a minute.'
+          : r.error === 'offline'
+            ? 'You seem to be offline. Check your connection and try again.'
+            : r.error === 'bad_question'
+              ? 'This word cannot be looked up. Try another word.'
+              : 'Could not look up this word. Try again.'
+      return { ok: false, message }
+    }
+    const key = r.data.word.trim().toLowerCase()
+    setExtraWords((prev) =>
+      prev.length >= MAX_EXTRA_WORDS || prev.some((w) => w.word.trim().toLowerCase() === key) ? prev : [...prev, r.data],
+    )
+    if (entryId) addExtraWord(entryId, r.data)
+    return { ok: true }
+  }
+
+  // The last try's error beside this one, when this entry follows another that is still kept.
+  const changes = useMemo(() => {
+    const entry = entryId ? getHistoryItem(entryId) : null
+    const previous = entry?.after ? getHistoryItem(entry.after) : null
+    return previous && request ? compareErrors(previous.text, request.text) : null
+  }, [entryId, result, request])
+
   // The rows "Check yourself" asks about. Kept between renders so the questions stay put
   // while the page updates around them (the countdown, a toast).
   const answerText = request?.text
@@ -197,6 +274,8 @@ export default function ExplainPage() {
     userAsked.current = true
     leaveHistoryEntry()
     setText(sample.text)
+    // An example is not a try of anything, so a waiting "Still broken?" link is dropped.
+    setPendingAfter(null)
     setRequest({ text: sample.text, level: null, language: null })
     setEntryId(null)
     setFollowUps([])
@@ -212,6 +291,9 @@ export default function ExplainPage() {
   // The same text at the same level was explained before: show that answer and save an AI call.
   function showKept(item, req) {
     userAsked.current = true
+    // A kept answer is not a new try, so nothing is linked to it. The waiting link stays only when
+    // this is the last try itself again (another level of the same text).
+    if (item.id !== pendingAfter) setPendingAfter(null)
     setOpened(item)
     setParams({ item: item.id }, { replace: true })
     setRequest(req)
@@ -250,7 +332,17 @@ export default function ExplainPage() {
     setEntryId(null)
     const answer = await explainText(req.text, req.level, req.language)
     if (answer.ok) {
-      const kept = addHistory({ text: req.text, result: answer.data, level: req.level, language: req.language })
+      // "Still broken?": the new error follows the last try. The same text again (another level of
+      // the old answer) keeps the link waiting; a documentation answer is not a try and drops it.
+      const sameTry = pendingAfter !== null && getHistoryItem(pendingAfter)?.text === req.text
+      const kept = addHistory({
+        text: req.text,
+        result: answer.data,
+        level: req.level,
+        language: req.language,
+        after: !sameTry && answer.data.kind === 'error' ? pendingAfter : null,
+      })
+      if (!sameTry) setPendingAfter(null)
       setEntryId(kept?.id ?? null)
       setSaved(savedKeys(answer.data.words))
       setResult(answer.data)
@@ -298,6 +390,24 @@ export default function ExplainPage() {
       toast('Saved to My Words')
       flyStar(el)
     }
+  }
+
+  function toggleStep(i) {
+    const next = done.includes(i) ? done.filter((d) => d !== i) : [...done, i]
+    setDoneState(next)
+    if (entryId) saveDone(entryId, next)
+  }
+
+  // "Still broken?": the next explanation follows this one. The box is emptied for the new message.
+  function stillBroken() {
+    setPendingAfter(entryId)
+    setText('')
+    pasteRef.current?.focus()
+  }
+
+  function markSolved() {
+    setPendingAfter(null)
+    if (entryId && saveSolved(entryId)) setSolvedState(true)
   }
 
   async function toggleShare() {
@@ -355,6 +465,8 @@ export default function ExplainPage() {
             </label>
             <textarea
               id="paste"
+              ref={pasteRef}
+              aria-describedby={pendingAfter ? 'fixit-note' : undefined}
               className="paste-box"
               rows={8}
               placeholder="Paste an error message or a paragraph from the docs…"
@@ -362,6 +474,16 @@ export default function ExplainPage() {
               onChange={(e) => setText(e.target.value)}
               onKeyDown={onPasteKeyDown}
             />
+            {pendingAfter && (
+              <div className="fix-it-pending">
+                <p id="fixit-note" className="soft">
+                  Paste the new message. It will be linked to the last try.
+                </p>
+                <button type="button" className="btn btn-quiet" onClick={() => setPendingAfter(null)}>
+                  Cancel the link
+                </button>
+              </div>
+            )}
             <div className="input-bar">
               {describeText(text) && <span className="type-chip">{describeText(text)}</span>}
               <span className={`input-count${tooLong ? ' count-over' : ''}`}>
@@ -566,6 +688,7 @@ export default function ExplainPage() {
 
         {result && (
           <>
+            {changes && <ChangedStrip changes={changes} />}
             <ResultCard title="In simple words" raised>
               <p className="result-lead">{result.explanation}</p>
               <HelpLine help={result.help} field="explanation" />
@@ -575,9 +698,11 @@ export default function ExplainPage() {
                 key={`lines-${entryId ?? 'none'}-${request.text}-${request.level}`}
                 text={request.text}
                 lines={result.lines}
-                words={result.words}
+                words={tableWords}
                 known={myWords}
                 reveal={freshAnswer}
+                onAskWord={askAboutWord}
+                askLeft={MAX_EXTRA_WORDS - extraWords.length}
                 isSaved={(w) => saved.has(wordKey(w.word))}
                 onSave={save}
               />
@@ -588,11 +713,15 @@ export default function ExplainPage() {
             </ResultCard>
             {result.steps.length > 0 && (
               <ResultCard title="What to try next">
-                <ol className="steps">
-                  {result.steps.map((s) => (
-                    <li key={s}>{s}</li>
-                  ))}
-                </ol>
+                <FixIt
+                  steps={result.steps}
+                  done={done}
+                  onToggle={toggleStep}
+                  canTrack={entryId !== null}
+                  solved={solved}
+                  onStillBroken={stillBroken}
+                  onSolved={markSolved}
+                />
               </ResultCard>
             )}
             {result.example && (

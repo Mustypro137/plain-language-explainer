@@ -6,7 +6,7 @@ import { isOptionalHelp } from './help.js'
 
 const isText = (v) => typeof v === 'string'
 
-const isHardWord = (w) =>
+export const isHardWord = (w) =>
   w !== null &&
   typeof w === 'object' &&
   isText(w.word) &&

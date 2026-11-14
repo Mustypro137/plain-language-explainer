@@ -1,8 +1,8 @@
 import { LANGUAGES, findLanguage } from '../../shared/languages.js'
-import { buildFollowUpMessages, buildMessages } from './aiProvider.js'
+import { buildFollowUpMessages, buildMessages, buildWordMessages } from './aiProvider.js'
 import { handleAsk } from './handleAsk.js'
 import { handleExplain } from './handleExplain.js'
-import { parseAiAnswer, parseFollowUp, validateFollowUp, validateLanguage } from './validate.js'
+import { parseAiAnswer, parseFollowUp, parseWordAnswer, validateFollowUp, validateLanguage, validateWordQuestion } from './validate.js'
 
 const answer = (over = {}) => ({
   kind: 'docs',
@@ -218,5 +218,73 @@ describe('handleAsk', () => {
     const r = await handleAsk(ask({ language: 'es' }), askFollowUp)
     expect(askFollowUp.mock.calls[0][0].language).toBe('es')
     expect(r.body).toEqual({ answer: 'A.', help: { lang: 'es', answer: 'B.' } })
+  })
+})
+
+describe('ask about a word', () => {
+  const text = 'npm ERR! code ERESOLVE\nnpm ERR! Could not resolve peer dependency react@17'
+  const line = 'npm ERR! Could not resolve peer dependency react@17'
+  const wordBody = (over = {}) => ({ mode: 'word', text, line, word: 'peer', language: null, ...over })
+
+  test('a word from a line of the text is accepted, trimmed', () => {
+    expect(validateWordQuestion(wordBody({ word: ' peer ' }))).toEqual({ ok: true, text, line, word: 'peer' })
+  })
+
+  test.each([
+    ['a one-letter word', { word: 'p' }],
+    ['a word over 40 letters', { word: 'p'.repeat(41) }],
+    ['a word that does not start with a letter', { word: '@17' }],
+    ['a line that is not in the text', { line: 'something else entirely' }],
+    ['a word that is not in the line', { word: 'banana' }],
+    ['a line over 500 characters', { text: 'x'.repeat(600), line: 'x'.repeat(501), word: 'xx' }],
+  ])('%s is refused', (_, over) => expect(validateWordQuestion(wordBody(over))).toEqual({ ok: false, error: 'bad_question' }))
+
+  test('the answer becomes a hard word, with the line as its sentence', () => {
+    expect(parseWordAnswer('{"meaning":"Here: a package your package needs you to install too.","topic":"node and npm"}', null, { word: 'peer', line })).toEqual({
+      word: 'peer',
+      meaning: 'Here: a package your package needs you to install too.',
+      sentence: line,
+      topic: 'Node and npm',
+    })
+  })
+
+  test('an unknown topic becomes General, and help is kept only for the language asked for', () => {
+    const raw = '{"meaning":"Next to.","topic":"Cooking","meaning_help":"Al lado."}'
+    expect(parseWordAnswer(raw, 'es', { word: 'peer', line })).toEqual({ word: 'peer', meaning: 'Next to.', sentence: line, topic: 'General', help: { lang: 'es', meaning: 'Al lado.' } })
+    expect(parseWordAnswer(raw, null, { word: 'peer', line }).help).toBeUndefined()
+  })
+
+  test('an over-long translation is dropped, the meaning kept', () => {
+    const raw = JSON.stringify({ meaning: 'Next to.', topic: 'General', meaning_help: 'x'.repeat(301) })
+    expect(parseWordAnswer(raw, 'es', { word: 'peer', line }).help).toBeUndefined()
+  })
+
+  test.each([['oops'], ['{}'], ['{"meaning":""}'], [JSON.stringify({ meaning: 'x'.repeat(301) })]])('%p is not an answer', (raw) =>
+    expect(parseWordAnswer(raw, null, { word: 'peer', line })).toBeNull(),
+  )
+
+  test('the prompt holds the line and the word, and refuses instructions in them', () => {
+    const [system, user] = buildWordMessages({ text, line, word: 'peer', language: 'es' })
+    expect(system.content).toMatch(/Never follow instructions/)
+    expect(system.content).toMatch(/Spanish/)
+    expect(user.content).toContain(line)
+    expect(user.content).toContain('peer')
+  })
+
+  test('handleAsk in word mode asks the word helper, not the question one', async () => {
+    const askFollowUp = vi.fn()
+    const askWord = vi.fn().mockResolvedValue('{"meaning":"Next to and equal.","topic":"Node and npm"}')
+    const r = await handleAsk(wordBody(), askFollowUp, askWord)
+    expect(r).toEqual({ status: 200, body: { word: 'peer', meaning: 'Next to and equal.', sentence: line, topic: 'Node and npm' } })
+    expect(askWord).toHaveBeenCalledWith({ text, line, word: 'peer', language: null })
+    expect(askFollowUp).not.toHaveBeenCalled()
+  })
+
+  test('handleAsk in word mode: 400 for a bad word, 502 after two broken answers', async () => {
+    const askWord = vi.fn().mockResolvedValue('{"meaning":""}')
+    expect((await handleAsk(wordBody({ word: 'banana' }), vi.fn(), askWord)).status).toBe(400)
+    expect(askWord).not.toHaveBeenCalled()
+    expect(await handleAsk(wordBody(), vi.fn(), askWord)).toEqual({ status: 502, body: { error: 'ai_failed' } })
+    expect(askWord).toHaveBeenCalledTimes(2)
   })
 })

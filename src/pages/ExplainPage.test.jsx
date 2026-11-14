@@ -2,7 +2,7 @@ import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { ToastProvider } from '../components/Toast.jsx'
-import { askAbout, explainText } from '../lib/explainText.js'
+import { askAbout, askWord, explainText } from '../lib/explainText.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
 import { addHistory, getHistoryItem, listHistory } from '../lib/historyStore.js'
 import { SAMPLES } from '../lib/samples.js'
@@ -1143,5 +1143,315 @@ describe('line-by-line reveal', () => {
     })
     setup(`/?item=${item.id}`)
     expect(screen.getByRole('region', { name: 'Line by line' })).not.toHaveClass('lines-reveal')
+  })
+})
+
+describe('fix-it loop', () => {
+  const resolveError = 'npm ERR! code ERESOLVE'
+  const accessError = 'npm ERR! code EACCES'
+
+  async function explainError(user, text) {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    await submit(user, text)
+    await screen.findByRole('heading', { level: 3, name: 'What to try next' })
+  }
+
+  test('ticking a step is kept with the entry and shows again when it is reopened', async () => {
+    const user = setup()
+    await explainError(user, resolveError)
+    await user.click(screen.getByRole('checkbox', { name: 'Open line 14' }))
+    const [entry] = listHistory()
+    expect(getHistoryItem(entry.id).done).toEqual([0])
+  })
+
+  test('a reopened entry shows its ticks', () => {
+    const item = addHistory({ text: resolveError, result: errorData })
+    localStorage.setItem('ple.history.v1', JSON.stringify([{ ...getHistoryItem(item.id), done: [1] }]))
+    setup(`/?item=${item.id}`)
+    expect(screen.getByRole('checkbox', { name: 'Add an empty list' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Open line 14' })).not.toBeChecked()
+  })
+
+  test('Still broken links the next error to this one and says what changed', async () => {
+    const user = setup()
+    await explainError(user, resolveError)
+    const first = listHistory()[0]
+    await user.click(screen.getByRole('button', { name: 'Still broken? Paste the new message' }))
+    const box = screen.getByLabelText('Your text')
+    expect(box).toHaveValue('')
+    expect(box).toHaveFocus()
+    expect(screen.getByText('Paste the new message. It will be linked to the last try.')).toBeInTheDocument()
+    await explainError(user, accessError)
+    const second = listHistory()[0]
+    expect(second.after).toBe(first.id)
+    const strip = screen.getByRole('region', { name: 'What changed since the last try' })
+    expect(within(strip).getByText(resolveError)).toBeInTheDocument()
+    expect(within(strip).getByText(accessError)).toBeInTheDocument()
+  })
+
+  test('pasting the same message again makes no link to itself', async () => {
+    const user = setup()
+    await explainError(user, resolveError)
+    await user.click(screen.getByRole('button', { name: 'Still broken? Paste the new message' }))
+    await user.type(screen.getByLabelText('Your text'), resolveError)
+    await user.click(explainButton())
+    await screen.findByRole('heading', { level: 3, name: 'What to try next' })
+    expect(listHistory()).toHaveLength(1)
+    expect(listHistory()[0].after).toBeUndefined()
+    expect(screen.queryByRole('region', { name: 'What changed since the last try' })).not.toBeInTheDocument()
+  })
+
+  test('It works now marks the entry solved', async () => {
+    const user = setup()
+    await explainError(user, resolveError)
+    await user.click(screen.getByRole('button', { name: 'It works now' }))
+    expect(listHistory()[0].solved).toBe(true)
+    expect(screen.getByText('Solved. The steps you ticked are kept with this answer.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'It works now' })).not.toBeInTheDocument()
+  })
+
+  test('an example has tick boxes but nothing to keep or link', async () => {
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'An npm error' }))
+    expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'It works now' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Still broken/ })).not.toBeInTheDocument()
+  })
+
+  test('a try whose earlier try was deleted shows no comparison', () => {
+    const first = addHistory({ text: resolveError, result: errorData })
+    const second = addHistory({ text: accessError, result: errorData, after: first.id })
+    localStorage.setItem('ple.history.v1', JSON.stringify([getHistoryItem(second.id)]))
+    setup(`/?item=${second.id}`)
+    expect(screen.queryByRole('region', { name: 'What changed since the last try' })).not.toBeInTheDocument()
+  })
+
+  test('an entry opened from History that followed another shows what changed', () => {
+    const first = addHistory({ text: resolveError, result: errorData })
+    const second = addHistory({ text: accessError, result: errorData, after: first.id })
+    setup(`/?item=${second.id}`)
+    expect(screen.getByRole('region', { name: 'What changed since the last try' })).toBeInTheDocument()
+  })
+})
+
+describe('fix-it loop: the waiting link', () => {
+  const resolveError = 'npm ERR! code ERESOLVE'
+  const note = 'Paste the new message. It will be linked to the last try.'
+
+  async function brokenAfterFirst(user) {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    await submit(user, resolveError)
+    await screen.findByRole('heading', { level: 3, name: 'What to try next' })
+    await user.click(screen.getByRole('button', { name: 'Still broken? Paste the new message' }))
+  }
+
+  test('the note is tied to the box and can be cancelled', async () => {
+    const user = setup()
+    await brokenAfterFirst(user)
+    expect(screen.getByLabelText('Your text')).toHaveAccessibleDescription(note)
+    await user.click(screen.getByRole('button', { name: 'Cancel the link' }))
+    expect(screen.queryByText(note)).not.toBeInTheDocument()
+  })
+
+  test('an example cancels the waiting link', async () => {
+    const user = setup()
+    await brokenAfterFirst(user)
+    await user.click(screen.getByRole('button', { name: 'An npm error' }))
+    expect(screen.queryByText(note)).not.toBeInTheDocument()
+  })
+
+  test('a documentation answer is not linked as a try', async () => {
+    const user = setup()
+    await brokenAfterFirst(user)
+    explainText.mockResolvedValue({ ok: true, data: docsData })
+    await submit(user, 'useEffect lets you sync a component with an outside system.')
+    await screen.findByRole('heading', { level: 3, name: 'In simple words' })
+    expect(listHistory()[0].after).toBeUndefined()
+    expect(screen.queryByText(note)).not.toBeInTheDocument()
+  })
+
+  test('asking the old answer at another level keeps the link waiting for the new message', async () => {
+    const user = setup()
+    await brokenAfterFirst(user)
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    await user.click(screen.getByRole('radio', { name: /Simpler/ }))
+    await screen.findByRole('heading', { level: 3, name: 'What to try next' })
+    expect(screen.getByText(note)).toBeInTheDocument()
+  })
+
+  test('It works now cancels the waiting link and keeps focus on the solved note', async () => {
+    const user = setup()
+    await brokenAfterFirst(user)
+    await user.click(screen.getByRole('button', { name: 'It works now' }))
+    expect(screen.queryByText(note)).not.toBeInTheDocument()
+    expect(screen.getByText('Solved. The steps you ticked are kept with this answer.')).toHaveFocus()
+  })
+})
+
+describe('ask about a word', () => {
+  const text = 'npm ERR! code ERESOLVE\nnpm ERR! Could not resolve peer dependency'
+  const linesData = {
+    ...errorData,
+    lines: [
+      { from: 1, to: 1, plain: 'npm stopped.' },
+      { from: 2, to: 2, plain: 'Two packages do not fit.' },
+    ],
+  }
+  const peer = { word: 'peer', meaning: 'Here: a package you install next to yours.', sentence: 'npm ERR! Could not resolve peer dependency', topic: 'Node and npm' }
+
+  async function answer(user) {
+    explainText.mockResolvedValue({ ok: true, data: linesData })
+    await submit(user, text)
+    await screen.findByRole('region', { name: 'Line by line' })
+  }
+  const table = () => screen.getByRole('region', { name: 'Line by line' })
+
+  test('word mode turns the words of the text into buttons and says how many are left', async () => {
+    const user = setup()
+    await answer(user)
+    expect(within(table()).queryByRole('button', { name: 'peer' })).not.toBeInTheDocument()
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    expect(within(table()).getByRole('button', { name: 'Ask about a word' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(table()).getByText('Tap any word in your text. 5 of 5 left.')).toBeInTheDocument()
+    expect(within(table()).getByRole('button', { name: 'peer' })).toBeInTheDocument()
+  })
+
+  test('tapping a word asks once, shows the meaning and keeps it with the entry', async () => {
+    askWord.mockResolvedValue({ ok: true, data: peer })
+    const user = setup()
+    await answer(user)
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    await user.click(within(table()).getByRole('button', { name: 'peer' }))
+    expect(await within(table()).findByText(peer.meaning)).toBeInTheDocument()
+    expect(askWord).toHaveBeenCalledTimes(1)
+    expect(askWord).toHaveBeenCalledWith({ text, line: 'npm ERR! Could not resolve peer dependency', word: 'peer', language: null })
+    expect(listHistory()[0].extraWords.map((w) => w.word)).toEqual(['peer'])
+    expect(within(table()).getByText('Tap any word in your text. 4 of 5 left.')).toBeInTheDocument()
+    // asking the same word again costs nothing
+    await user.click(within(table()).getAllByRole('button', { name: 'peer' })[0])
+    await user.click(within(table()).getAllByRole('button', { name: 'peer' })[0])
+    expect(askWord).toHaveBeenCalledTimes(1)
+  })
+
+  test('Save keeps the asked word with its line as the sentence', async () => {
+    askWord.mockResolvedValue({ ok: true, data: peer })
+    const user = setup()
+    await answer(user)
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    await user.click(within(table()).getByRole('button', { name: 'peer' }))
+    await user.click(await within(table()).findByRole('button', { name: 'Save peer to My Words' }))
+    const saved = listWords().find((w) => w.word === 'peer')
+    expect(saved.sentence).toBe(peer.sentence)
+  })
+
+  test('after five words no more are asked', async () => {
+    const item = addHistory({ text, result: linesData })
+    localStorage.setItem('ple.history.v1', JSON.stringify([{ ...getHistoryItem(item.id), extraWords: ['code', 'could', 'not', 'resolve', 'dependency'].map((w) => ({ word: w, meaning: 'm', sentence: 's', topic: 'General' })) }]))
+    const user = setup(`/?item=${item.id}`)
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    expect(within(table()).getByText('You have asked about 5 words for this answer.')).toBeInTheDocument()
+    expect(within(table()).queryByRole('button', { name: 'peer' })).not.toBeInTheDocument()
+    expect(askWord).not.toHaveBeenCalled()
+  })
+
+  test('a busy AI says so in the panel and keeps nothing', async () => {
+    askWord.mockResolvedValue({ ok: false, error: 'busy' })
+    const user = setup()
+    await answer(user)
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    await user.click(within(table()).getByRole('button', { name: 'peer' }))
+    expect(await within(table()).findByText('The AI is busy. Try again in a minute.')).toBeInTheDocument()
+    expect(listHistory()[0].extraWords).toBeUndefined()
+  })
+
+  test('a word in a grouped row is asked about with its own line only', async () => {
+    askWord.mockResolvedValue({ ok: true, data: peer })
+    explainText.mockResolvedValue({ ok: true, data: { ...errorData, lines: [{ from: 1, to: 2, plain: 'npm could not install.' }] } })
+    const user = setup()
+    await submit(user, text)
+    await screen.findByRole('region', { name: 'Line by line' })
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    await user.click(within(table()).getByRole('button', { name: 'peer' }))
+    expect(askWord).toHaveBeenCalledWith(expect.objectContaining({ line: 'npm ERR! Could not resolve peer dependency' }))
+  })
+
+  test('a line too long to send has no word buttons', async () => {
+    const long = `${'word '.repeat(110)}end`
+    explainText.mockResolvedValue({ ok: true, data: { ...errorData, lines: [{ from: 1, to: 1, plain: 'Many words.' }] } })
+    const user = setup()
+    await user.click(screen.getByLabelText('Your text'))
+    await user.paste(long)
+    await user.click(explainButton())
+    await screen.findByRole('region', { name: 'Line by line' })
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    expect(within(table()).queryByRole('button', { name: 'end' })).not.toBeInTheDocument()
+  })
+
+  test('fast taps never ask more than five words, nor one word twice', async () => {
+    askWord.mockReturnValue(new Promise(() => {}))
+    const user = setup()
+    await answer(user)
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    for (const w of ['code', 'peer', 'code', 'Could', 'not', 'resolve', 'dependency']) {
+      await user.click(within(table()).getAllByRole('button', { name: w })[0])
+    }
+    expect(askWord).toHaveBeenCalledTimes(5)
+    expect(askWord.mock.calls.filter(([a]) => a.word === 'code')).toHaveLength(1)
+  })
+
+  test('the keyboard focus moves to the word once it is answered', async () => {
+    askWord.mockResolvedValue({ ok: true, data: peer })
+    const user = setup()
+    await answer(user)
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    within(table()).getByRole('button', { name: 'peer' }).focus()
+    await user.keyboard('{Enter}')
+    await within(table()).findByText(peer.meaning)
+    expect(document.activeElement).toHaveAccessibleName('peer')
+    expect(document.activeElement).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  test('a used-up limit says how long to wait and asks nothing more meanwhile', async () => {
+    askWord.mockResolvedValue({ ok: false, error: 'busy', retryAfter: 300, limit: 'day' })
+    const user = setup()
+    await answer(user)
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    await user.click(within(table()).getByRole('button', { name: 'peer' }))
+    expect(await within(table()).findByText(/used up for today\. You can ask again in 5 minutes\./)).toBeInTheDocument()
+    await user.click(within(table()).getByRole('button', { name: 'code' }))
+    expect(askWord).toHaveBeenCalledTimes(1)
+  })
+
+  test('a word that cannot be looked up does not invite a retry', async () => {
+    askWord.mockResolvedValue({ ok: false, error: 'bad_question' })
+    const user = setup()
+    await answer(user)
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    await user.click(within(table()).getByRole('button', { name: 'peer' }))
+    expect(await within(table()).findByText('This word cannot be looked up. Try another word.')).toBeInTheDocument()
+  })
+
+  test('an answer that arrives after word mode is turned off does not open the panel', async () => {
+    let resolve
+    askWord.mockReturnValue(new Promise((r) => (resolve = r)))
+    const user = setup()
+    await answer(user)
+    const toggle = within(table()).getByRole('button', { name: 'Ask about a word' })
+    await user.click(toggle)
+    await user.click(within(table()).getByRole('button', { name: 'peer' }))
+    await user.click(toggle)
+    await act(async () => resolve({ ok: true, data: peer }))
+    expect(within(table()).queryByText(peer.meaning)).not.toBeInTheDocument()
+    expect(within(table()).queryByText(/Looking up/)).not.toBeInTheDocument()
+  })
+
+  test('an example can ask about a word but keeps nothing in History', async () => {
+    askWord.mockResolvedValue({ ok: true, data: { ...peer, word: 'could', sentence: 'npm ERR! ERESOLVE could not resolve' } })
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'An npm error' }))
+    await user.click(within(table()).getByRole('button', { name: 'Ask about a word' }))
+    await user.click(within(table()).getAllByRole('button', { name: 'could' })[0])
+    await within(table()).findByText(peer.meaning)
+    expect(listHistory()).toEqual([])
   })
 })

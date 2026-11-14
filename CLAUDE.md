@@ -29,7 +29,7 @@ npx vercel dev                             # app + /api on http://localhost:3000
   - `languages.js`: the "Help in my language" list. Adding a language there enables it in both the menu and the server validation.
 
 **Server (`api/`)**
-- `api/explain.js` and `api/ask.js` are thin `fetch` adapters. They call `handleExplain(body, askAi)` / `handleAsk(body, askFollowUp)` in `api/_lib/`, which return `{status, body}`. The AI function is injected, so the handlers are tested without network access.
+- `api/explain.js` and `api/ask.js` are thin `fetch` adapters (`/api/ask` also has `mode: "word"` for "Ask about a word"). They call `handleExplain(body, askAi)` / `handleAsk(body, askFollowUp)` in `api/_lib/`, which return `{status, body}`. The AI function is injected, so the handlers are tested without network access.
 - `api/_lib/validate.js` checks both directions:
   - the request: text up to 3,000 chars, level, language;
   - the AI's JSON answer: `parseAiAnswer`, `parseFollowUp`. A malformed answer counts as a failure.
