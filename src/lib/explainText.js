@@ -56,3 +56,8 @@ export function askAbout({ text, explanation, question, earlier = [], language =
     language,
   })
 }
+
+// "Ask about a word": what one word of the text means in its line. Same answers as askAbout.
+export function askWord({ text, line, word, language = null }) {
+  return post('/api/ask', { mode: 'word', text, line, word, language })
+}

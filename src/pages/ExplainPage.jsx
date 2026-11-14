@@ -17,13 +17,15 @@ import { useToast } from '../components/Toast.jsx'
 import { dayKey } from '../lib/days.js'
 import { compareErrors } from '../lib/compareErrors.js'
 import { describeText } from '../lib/describeText.js'
-import { askAbout, explainText } from '../lib/explainText.js'
+import { askAbout, askWord, explainText } from '../lib/explainText.js'
 import { formatDate } from '../lib/formatDate.js'
 import { formatExplanation } from '../lib/formatExplanation.js'
 import { formatWait } from '../lib/formatWait.js'
 import {
+  addExtraWord,
   addFollowUp,
   addHistory,
+  MAX_EXTRA_WORDS,
   findHistory,
   followUpsOf,
   getHistoryItem,
@@ -129,6 +131,8 @@ export default function ExplainPage() {
   const [done, setDoneState] = useState([])
   const [solved, setSolvedState] = useState(false)
   const [pendingAfter, setPendingAfter] = useState(null)
+  // "Ask about a word": the words asked about for the answer on screen (kept with its entry).
+  const [extraWords, setExtraWords] = useState([])
   const pasteRef = useRef(null)
   const [followUps, setFollowUps] = useState(() => (opened ? followUpsOf(opened) : []))
   // Set when the free AI limit is used up: { until (ms), total (seconds), limit }.
@@ -140,7 +144,57 @@ export default function ExplainPage() {
     const entry = entryId ? getHistoryItem(entryId) : null
     setDoneState(entry?.done ?? [])
     setSolvedState(entry?.solved === true)
+    setExtraWords(entry?.extraWords ?? [])
   }, [entryId, result])
+
+  // The hard words and the words asked about, marked together in the text.
+  const tableWords = useMemo(() => (result ? [...result.words, ...extraWords] : []), [result, extraWords])
+
+  // The lookups still on their way for the answer on screen, by word: a word tapped again shares
+  // its call, and these count towards the five so fast taps never ask more.
+  const lookups = useRef(new Map())
+  useEffect(() => {
+    lookups.current = new Map()
+  }, [result])
+
+  function askAboutWord(word, line) {
+    if (waiting) return Promise.resolve({ ok: false, message: `${LIMIT_TITLES[wait.limit ?? 'unknown']} You can ask again in ${formatWait(remaining)}.` })
+    const key = word.trim().toLowerCase()
+    const pending = lookups.current
+    if (pending.has(key)) return pending.get(key)
+    if (extraWords.length + pending.size >= MAX_EXTRA_WORDS) return Promise.resolve({ ok: false, message: 'You have asked about 5 words for this answer.' })
+    const about = result
+    const lookup = lookUp(word, line, about).finally(() => pending.delete(key))
+    pending.set(key, lookup)
+    return lookup
+  }
+
+  async function lookUp(word, line, about) {
+    const r = await askWord({ text: request.text, line, word, language })
+    // A new answer came meanwhile: this word belongs to the old one.
+    if (resultRef.current !== about) return { ok: false, message: '' }
+    if (!r.ok) {
+      if (r.error === 'busy' && r.retryAfter) {
+        startWait(r)
+        return { ok: false, message: `${LIMIT_TITLES[r.limit ?? 'unknown']} You can ask again in ${formatWait(r.retryAfter)}.` }
+      }
+      const message =
+        r.error === 'busy'
+          ? 'The AI is busy. Try again in a minute.'
+          : r.error === 'offline'
+            ? 'You seem to be offline. Check your connection and try again.'
+            : r.error === 'bad_question'
+              ? 'This word cannot be looked up. Try another word.'
+              : 'Could not look up this word. Try again.'
+      return { ok: false, message }
+    }
+    const key = r.data.word.trim().toLowerCase()
+    setExtraWords((prev) =>
+      prev.length >= MAX_EXTRA_WORDS || prev.some((w) => w.word.trim().toLowerCase() === key) ? prev : [...prev, r.data],
+    )
+    if (entryId) addExtraWord(entryId, r.data)
+    return { ok: true }
+  }
 
   // The last try's error beside this one, when this entry follows another that is still kept.
   const changes = useMemo(() => {
@@ -644,9 +698,11 @@ export default function ExplainPage() {
                 key={`lines-${entryId ?? 'none'}-${request.text}-${request.level}`}
                 text={request.text}
                 lines={result.lines}
-                words={result.words}
+                words={tableWords}
                 known={myWords}
                 reveal={freshAnswer}
+                onAskWord={askAboutWord}
+                askLeft={MAX_EXTRA_WORDS - extraWords.length}
                 isSaved={(w) => saved.has(wordKey(w.word))}
                 onSave={save}
               />

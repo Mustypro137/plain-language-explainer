@@ -108,3 +108,22 @@ test('busy without a usable wait time stays plain busy', async () => {
   stubFetch(429, { error: 'busy', retryAfter: 'soon', limit: 'week' })
   expect(await explainText('x')).toEqual({ ok: false, error: 'busy' })
 })
+
+describe('askWord', () => {
+  test('posts the word with its line in word mode and returns the word', async () => {
+    const word = { word: 'peer', meaning: 'Next to.', sentence: 'npm ERR! peer react', topic: 'Node and npm' }
+    const fn = vi.fn().mockResolvedValue(new Response(JSON.stringify(word), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fn)
+    const { askWord } = await import('./explainText.js')
+    expect(await askWord({ text: 't', line: 'npm ERR! peer react', word: 'peer', language: 'es' })).toEqual({ ok: true, data: word })
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toBe('/api/ask')
+    expect(JSON.parse(init.body)).toEqual({ mode: 'word', text: 't', line: 'npm ERR! peer react', word: 'peer', language: 'es' })
+  })
+
+  test('a busy AI comes back as busy', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'busy', retryAfter: 9, limit: 'minute' }), { status: 429 })))
+    const { askWord } = await import('./explainText.js')
+    expect(await askWord({ text: 't', line: 'l', word: 'ww' })).toMatchObject({ ok: false, error: 'busy' })
+  })
+})

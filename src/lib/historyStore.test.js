@@ -1,5 +1,6 @@
 import {
   MAX_ITEMS,
+  addExtraWord,
   addHistory,
   clearHistory,
   deleteHistoryItem,
@@ -311,5 +312,33 @@ describe('fix-it loop', () => {
     expect(item.done).toBeUndefined()
     expect(item.after).toBeUndefined()
     expect(item.solved).toBeUndefined()
+  })
+})
+
+describe('words asked about', () => {
+  const word = (w) => ({ word: w, meaning: 'm', sentence: 'line with ' + w, topic: 'General' })
+
+  test('up to five words are kept with the entry, each once', () => {
+    const item = addHistory({ text: 'err', result: result() })
+    for (const w of ['peer', 'resolve', 'install', 'module', 'cache']) expect(addExtraWord(item.id, word(w))).toBe(true)
+    expect(addExtraWord(item.id, word('sixth'))).toBe(false)
+    expect(getHistoryItem(item.id).extraWords.map((w) => w.word)).toEqual(['peer', 'resolve', 'install', 'module', 'cache'])
+  })
+
+  test('the same word twice, a missing entry or a broken word is refused', () => {
+    const item = addHistory({ text: 'err', result: result() })
+    addExtraWord(item.id, word('peer'))
+    expect(addExtraWord(item.id, word('Peer'))).toBe(false)
+    expect(addExtraWord('missing', word('x'))).toBe(false)
+    expect(addExtraWord(item.id, { word: 'x' })).toBe(false)
+  })
+
+  test('broken words in storage are dropped, and a new answer for the text starts with none', () => {
+    localStorage.setItem(KEY, JSON.stringify([stored({ extraWords: 'x' })]))
+    expect(listHistory()[0].extraWords).toBeUndefined()
+    const item = addHistory({ text: 'err', result: result() })
+    addExtraWord(item.id, word('peer'))
+    addHistory({ text: 'err', result: result({ why: 'New.' }) })
+    expect(getHistoryItem(item.id).extraWords).toBeUndefined()
   })
 })

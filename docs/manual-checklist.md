@@ -195,6 +195,14 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] Pasting the same message again makes no link. "It works now" shows "Solved. The steps you ticked are kept with this answer." and History shows "Solved".
 - [ ] An example shows tick boxes but neither button. A docs answer has no tick boxes.
 
+## Ask about any word
+
+- [ ] "Ask about a word" in Line by line turns the words of your text into buttons (Tab reaches them) and says "Tap any word in your text. 5 of 5 left."
+- [ ] Tapping a word shows "Looking up …", then its meaning in the word panel; the word stays dotted, the count goes down, and tapping it again makes no request.
+- [ ] Save keeps it in My Words with the line as its sentence. After 5 words the hint says "You have asked about 5 words for this answer." and words are no longer buttons.
+- [ ] In a stack trace, a word inside the grouped "at …" lines can be asked about (only its own line is sent). Asking with the keyboard (Enter) keeps focus on the word once it is answered. Tapping many words fast never asks more than 5.
+- [ ] Reopening the entry from History shows the asked words dotted. Offline or busy shows a message in the panel.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing slides, flips or scales (entrances are short fades) and the flashcard still shows its back.

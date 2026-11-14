@@ -1,4 +1,4 @@
-import { isFollowUp, isLanguage, isLevel, isResult } from './answerShape.js'
+import { isFollowUp, isHardWord, isLanguage, isLevel, isResult } from './answerShape.js'
 
 const KEY = 'ple.history.v1'
 
@@ -14,7 +14,10 @@ const isCheck = (c) => c !== null && typeof c === 'object' && Number.isInteger(c
 
 // Fix-it loop: the ticked steps, the try this one followed, and whether it got solved.
 const isDone = (d) => Array.isArray(d) && d.every((i) => Number.isInteger(i) && i >= 0)
-const EXTRAS = { check: isCheck, done: isDone, after: isText, solved: (v) => v === true }
+// "Ask about a word": up to five words asked about, kept with the answer.
+export const MAX_EXTRA_WORDS = 5
+const isExtraWords = (w) => Array.isArray(w) && w.length <= MAX_EXTRA_WORDS && w.every(isHardWord)
+const EXTRAS = { check: isCheck, done: isDone, after: isText, solved: (v) => v === true, extraWords: isExtraWords }
 
 // A broken extra (a score, ticks, a link) is only that extra lost: the entry itself is kept.
 function withoutBadExtras(h) {
@@ -126,6 +129,18 @@ export function setDone(id, indices) {
   const item = items.find((h) => h.id === id)
   if (!item || !isDone(indices)) return false
   item.done = [...new Set(indices)].sort((a, b) => a - b)
+  return write(items)
+}
+
+// Keeps a word asked about with the entry. False if the entry is gone, full, or has it already.
+export function addExtraWord(id, word) {
+  const items = read()
+  const item = items.find((h) => h.id === id)
+  if (!item || !isHardWord(word)) return false
+  const words = item.extraWords ?? []
+  const key = word.word.trim().toLowerCase()
+  if (words.length >= MAX_EXTRA_WORDS || words.some((w) => w.word.trim().toLowerCase() === key)) return false
+  item.extraWords = [...words, word]
   return write(items)
 }
 
