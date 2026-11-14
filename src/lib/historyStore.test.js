@@ -9,7 +9,10 @@ import {
   levelOf,
   listHistory,
   restoreHistory,
+  chainLength,
   setCheck,
+  setDone,
+  setSolved,
 } from './historyStore.js'
 
 const KEY = 'ple.history.v1'
@@ -239,4 +242,74 @@ test('explaining the same text again drops the old score', () => {
   setCheck(item.id, { right: 1, total: 3 })
   addHistory({ text: 'some error', result: result({ why: 'A new reason.' }) })
   expect(getHistoryItem(item.id).check).toBeUndefined()
+})
+
+describe('fix-it loop', () => {
+  test('setDone keeps the ticked steps, sorted and once each', () => {
+    const item = addHistory({ text: 'err', result: result() })
+    expect(setDone(item.id, [2, 0, 2])).toBe(true)
+    expect(getHistoryItem(item.id).done).toEqual([0, 2])
+    expect(setDone(item.id, [-1])).toBe(false)
+    expect(setDone(item.id, [1.5])).toBe(false)
+    expect(setDone('missing', [0])).toBe(false)
+  })
+
+  test('setSolved marks the entry as solved', () => {
+    const item = addHistory({ text: 'err', result: result() })
+    expect(setSolved(item.id)).toBe(true)
+    expect(getHistoryItem(item.id).solved).toBe(true)
+    expect(setSolved('missing')).toBe(false)
+  })
+
+  test('a new try remembers the try before it', () => {
+    const first = addHistory({ text: 'err one', result: result() })
+    const second = addHistory({ text: 'err two', result: result(), after: first.id })
+    expect(getHistoryItem(second.id).after).toBe(first.id)
+  })
+
+  test('a try never follows itself or an entry that is not there', () => {
+    const first = addHistory({ text: 'err one', result: result() })
+    const again = addHistory({ text: 'err one', result: result(), after: first.id })
+    expect(again.id).toBe(first.id)
+    expect(getHistoryItem(first.id).after).toBeUndefined()
+    const other = addHistory({ text: 'err two', result: result(), after: 'missing' })
+    expect(getHistoryItem(other.id).after).toBeUndefined()
+  })
+
+  test('a try explained again (another level, or asked again) stays linked to the try before it', () => {
+    const first = addHistory({ text: 'err one', result: result() })
+    const second = addHistory({ text: 'err two', result: result(), after: first.id })
+    addHistory({ text: 'err two', result: result({ why: 'Simpler.' }), level: 'simpler' })
+    expect(getHistoryItem(second.id).after).toBe(first.id)
+  })
+
+  test('explaining the same text again starts with no ticks and not solved', () => {
+    const item = addHistory({ text: 'err', result: result() })
+    setDone(item.id, [0])
+    setSolved(item.id)
+    addHistory({ text: 'err', result: result({ why: 'New.' }) })
+    expect(getHistoryItem(item.id).done).toBeUndefined()
+    expect(getHistoryItem(item.id).solved).toBeUndefined()
+  })
+
+  test('chainLength counts the tries back to the first, and survives gaps and loops', () => {
+    const a = addHistory({ text: 'a', result: result() })
+    const b = addHistory({ text: 'b', result: result(), after: a.id })
+    const c = addHistory({ text: 'c', result: result(), after: b.id })
+    const items = listHistory()
+    expect(chainLength(getHistoryItem(c.id), items)).toBe(3)
+    expect(chainLength(getHistoryItem(a.id), items)).toBe(1)
+    const loop = [{ id: 'x', after: 'y' }, { id: 'y', after: 'x' }]
+    expect(chainLength(loop[0], loop)).toBe(2)
+    expect(chainLength({ id: 'z', after: 'gone' }, items)).toBe(1)
+  })
+
+  test('broken fix-it values are dropped, and the entry is kept', () => {
+    localStorage.setItem(KEY, JSON.stringify([stored({ done: 'x', after: 5, solved: 'yes' })]))
+    const [item] = listHistory()
+    expect(item.id).toBe('g')
+    expect(item.done).toBeUndefined()
+    expect(item.after).toBeUndefined()
+    expect(item.solved).toBeUndefined()
+  })
 })

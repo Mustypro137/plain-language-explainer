@@ -184,3 +184,19 @@ describe('grouped by day', () => {
     expect(screen.getByText('Nothing in History matches your search.')).toBeInTheDocument()
   })
 })
+
+test('a later try says which try it is, and a solved one says so', () => {
+  const now = Date.now()
+  const at = (s) => new Date(now - s * 1000).toISOString()
+  localStorage.setItem(
+    'ple.history.v1',
+    JSON.stringify([
+      { ...mk('c', 'third error', 'error', at(1)), after: 'b', solved: true },
+      { ...mk('b', 'second error', 'error', at(2)), after: 'a' },
+      mk('a', 'first error', 'error', at(3)),
+    ]),
+  )
+  setup()
+  expect(screen.getByText('Try 3 · Solved')).toBeInTheDocument()
+  expect(screen.getByText('Try 2')).toBeInTheDocument()
+})

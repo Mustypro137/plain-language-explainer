@@ -1145,3 +1145,145 @@ describe('line-by-line reveal', () => {
     expect(screen.getByRole('region', { name: 'Line by line' })).not.toHaveClass('lines-reveal')
   })
 })
+
+describe('fix-it loop', () => {
+  const resolveError = 'npm ERR! code ERESOLVE'
+  const accessError = 'npm ERR! code EACCES'
+
+  async function explainError(user, text) {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    await submit(user, text)
+    await screen.findByRole('heading', { level: 3, name: 'What to try next' })
+  }
+
+  test('ticking a step is kept with the entry and shows again when it is reopened', async () => {
+    const user = setup()
+    await explainError(user, resolveError)
+    await user.click(screen.getByRole('checkbox', { name: 'Open line 14' }))
+    const [entry] = listHistory()
+    expect(getHistoryItem(entry.id).done).toEqual([0])
+  })
+
+  test('a reopened entry shows its ticks', () => {
+    const item = addHistory({ text: resolveError, result: errorData })
+    localStorage.setItem('ple.history.v1', JSON.stringify([{ ...getHistoryItem(item.id), done: [1] }]))
+    setup(`/?item=${item.id}`)
+    expect(screen.getByRole('checkbox', { name: 'Add an empty list' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Open line 14' })).not.toBeChecked()
+  })
+
+  test('Still broken links the next error to this one and says what changed', async () => {
+    const user = setup()
+    await explainError(user, resolveError)
+    const first = listHistory()[0]
+    await user.click(screen.getByRole('button', { name: 'Still broken? Paste the new message' }))
+    const box = screen.getByLabelText('Your text')
+    expect(box).toHaveValue('')
+    expect(box).toHaveFocus()
+    expect(screen.getByText('Paste the new message. It will be linked to the last try.')).toBeInTheDocument()
+    await explainError(user, accessError)
+    const second = listHistory()[0]
+    expect(second.after).toBe(first.id)
+    const strip = screen.getByRole('region', { name: 'What changed since the last try' })
+    expect(within(strip).getByText(resolveError)).toBeInTheDocument()
+    expect(within(strip).getByText(accessError)).toBeInTheDocument()
+  })
+
+  test('pasting the same message again makes no link to itself', async () => {
+    const user = setup()
+    await explainError(user, resolveError)
+    await user.click(screen.getByRole('button', { name: 'Still broken? Paste the new message' }))
+    await user.type(screen.getByLabelText('Your text'), resolveError)
+    await user.click(explainButton())
+    await screen.findByRole('heading', { level: 3, name: 'What to try next' })
+    expect(listHistory()).toHaveLength(1)
+    expect(listHistory()[0].after).toBeUndefined()
+    expect(screen.queryByRole('region', { name: 'What changed since the last try' })).not.toBeInTheDocument()
+  })
+
+  test('It works now marks the entry solved', async () => {
+    const user = setup()
+    await explainError(user, resolveError)
+    await user.click(screen.getByRole('button', { name: 'It works now' }))
+    expect(listHistory()[0].solved).toBe(true)
+    expect(screen.getByText('Solved. The steps you ticked are kept with this answer.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'It works now' })).not.toBeInTheDocument()
+  })
+
+  test('an example has tick boxes but nothing to keep or link', async () => {
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'An npm error' }))
+    expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'It works now' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Still broken/ })).not.toBeInTheDocument()
+  })
+
+  test('a try whose earlier try was deleted shows no comparison', () => {
+    const first = addHistory({ text: resolveError, result: errorData })
+    const second = addHistory({ text: accessError, result: errorData, after: first.id })
+    localStorage.setItem('ple.history.v1', JSON.stringify([getHistoryItem(second.id)]))
+    setup(`/?item=${second.id}`)
+    expect(screen.queryByRole('region', { name: 'What changed since the last try' })).not.toBeInTheDocument()
+  })
+
+  test('an entry opened from History that followed another shows what changed', () => {
+    const first = addHistory({ text: resolveError, result: errorData })
+    const second = addHistory({ text: accessError, result: errorData, after: first.id })
+    setup(`/?item=${second.id}`)
+    expect(screen.getByRole('region', { name: 'What changed since the last try' })).toBeInTheDocument()
+  })
+})
+
+describe('fix-it loop: the waiting link', () => {
+  const resolveError = 'npm ERR! code ERESOLVE'
+  const note = 'Paste the new message. It will be linked to the last try.'
+
+  async function brokenAfterFirst(user) {
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    await submit(user, resolveError)
+    await screen.findByRole('heading', { level: 3, name: 'What to try next' })
+    await user.click(screen.getByRole('button', { name: 'Still broken? Paste the new message' }))
+  }
+
+  test('the note is tied to the box and can be cancelled', async () => {
+    const user = setup()
+    await brokenAfterFirst(user)
+    expect(screen.getByLabelText('Your text')).toHaveAccessibleDescription(note)
+    await user.click(screen.getByRole('button', { name: 'Cancel the link' }))
+    expect(screen.queryByText(note)).not.toBeInTheDocument()
+  })
+
+  test('an example cancels the waiting link', async () => {
+    const user = setup()
+    await brokenAfterFirst(user)
+    await user.click(screen.getByRole('button', { name: 'An npm error' }))
+    expect(screen.queryByText(note)).not.toBeInTheDocument()
+  })
+
+  test('a documentation answer is not linked as a try', async () => {
+    const user = setup()
+    await brokenAfterFirst(user)
+    explainText.mockResolvedValue({ ok: true, data: docsData })
+    await submit(user, 'useEffect lets you sync a component with an outside system.')
+    await screen.findByRole('heading', { level: 3, name: 'In simple words' })
+    expect(listHistory()[0].after).toBeUndefined()
+    expect(screen.queryByText(note)).not.toBeInTheDocument()
+  })
+
+  test('asking the old answer at another level keeps the link waiting for the new message', async () => {
+    const user = setup()
+    await brokenAfterFirst(user)
+    explainText.mockResolvedValue({ ok: true, data: errorData })
+    await user.click(screen.getByRole('radio', { name: /Simpler/ }))
+    await screen.findByRole('heading', { level: 3, name: 'What to try next' })
+    expect(screen.getByText(note)).toBeInTheDocument()
+  })
+
+  test('It works now cancels the waiting link and keeps focus on the solved note', async () => {
+    const user = setup()
+    await brokenAfterFirst(user)
+    await user.click(screen.getByRole('button', { name: 'It works now' }))
+    expect(screen.queryByText(note)).not.toBeInTheDocument()
+    expect(screen.getByText('Solved. The steps you ticked are kept with this answer.')).toHaveFocus()
+  })
+})

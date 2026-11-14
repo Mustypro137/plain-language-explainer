@@ -188,6 +188,13 @@ Errors must show all five parts. Docs paragraphs must show four (no "What to try
 - [ ] "Show the example" opens smoothly in Chrome or Edge (and simply opens elsewhere). Chips and dotted words shrink slightly while pressed.
 - [ ] With reduce motion on (system setting, or DevTools > Rendering): nothing slides, scales or staggers; entrances are short fades, stars appear already lit, and nothing stays invisible.
 
+## Fix-it loop
+
+- [ ] An error answer shows "What to try next" as tick boxes (keyboard and touch); ticks are still there when the entry is reopened from History.
+- [ ] "Still broken? Paste the new message" empties and focuses the box with the note; the next error's answer opens with "What changed since the last try" (Gone / New), and History shows it as "Try 2".
+- [ ] Pasting the same message again makes no link. "It works now" shows "Solved. The steps you ticked are kept with this answer." and History shows "Solved".
+- [ ] An example shows tick boxes but neither button. A docs answer has no tick boxes.
+
 ## Polish checks (from Task 7)
 
 - [ ] With the system "reduce motion" setting on, nothing slides, flips or scales (entrances are short fades) and the flashcard still shows its back.

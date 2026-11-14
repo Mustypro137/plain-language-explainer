@@ -778,6 +778,125 @@ a:hover {
   gap: 8px;
 }
 
+/* Fix-it loop: the steps as tick boxes, the two ways a try ends, and what changed */
+.fix-it {
+  display: grid;
+  gap: 12px;
+}
+
+.steps-check {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.step-check input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--accent-fill);
+  cursor: pointer;
+}
+
+.step-check input:checked + span {
+  color: var(--soft-ink);
+}
+
+.fix-it-hint {
+  margin: 0;
+  font-size: 14px;
+}
+
+.fix-it-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fix-it-solved {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--known-soft);
+  color: var(--known);
+  font-weight: 700;
+}
+
+.fix-it-pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.fix-it-pending p {
+  margin: 0;
+}
+
+.fix-it-pending .btn {
+  min-height: 36px;
+  padding: 4px 8px;
+  font-size: 14px;
+}
+
+.fix-it-solved:focus {
+  outline: none;
+}
+
+.changed-strip {
+  display: grid;
+  gap: 10px;
+}
+
+.changed-strip p {
+  margin: 0;
+}
+
+.changed-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.changed-list dt {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--faint-ink);
+}
+
+.changed-list dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.changed-list code {
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.changed-gone code {
+  color: var(--soft-ink);
+  text-decoration: line-through;
+}
+
+.changed-new code {
+  color: var(--alert);
+}
+
 .code-block {
   margin: 0;
   padding: 16px;
