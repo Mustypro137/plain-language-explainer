@@ -638,6 +638,7 @@ a:hover {
 }
 
 .results-head h2 {
+  flex: 1 1 auto;
   font-size: 26px;
 }
 
@@ -2938,4 +2939,69 @@ select.search-box {
       background: transparent;
     }
   }
+}
+
+/* Share: the sheet under the answer's actions, and the page a shared link opens */
+.share-sheet {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.share-sheet p {
+  margin: 0;
+}
+
+.share-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.share-link {
+  flex: 1 1 220px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.share-link:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.shared-page {
+  display: grid;
+  /* minmax(0, 1fr): one long file path must not widen the page past a phone screen */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.shared-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.shared-banner h1 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
 }
