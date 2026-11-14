@@ -847,7 +847,29 @@ a:hover {
   background: var(--ink);
   color: var(--panel);
   font-weight: 700;
+  /* In from the bottom edge, and out the same way (Toast.jsx adds toast-leaving 150ms before
+     it closes). The exit is a transition, so pointing at a leaving toast reverses it smoothly. */
+  animation: toast-in var(--t-state) var(--ease) backwards;
+  transition:
+    opacity 150ms ease-in,
+    transform 150ms ease-in;
 }
+
+.toast-leaving {
+  opacity: 0;
+  transform: translate(-50%, var(--toast-y));
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, var(--toast-y));
+  }
+  to {
+    transform: translate(-50%, 0);
+  }
+}
+
 
 .toast-action {
   min-height: 40px;
@@ -1051,7 +1073,12 @@ a:hover {
   cursor: pointer;
   transition:
     background-color var(--t-press) var(--ease),
-    border-color var(--t-press) var(--ease);
+    border-color var(--t-press) var(--ease),
+    transform var(--t-press) var(--ease);
+}
+
+.word-chip:active {
+  transform: scale(var(--press-scale));
 }
 
 .word-chip:hover {
@@ -2049,6 +2076,13 @@ kbd {
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
   cursor: pointer;
+  transition:
+    background-color var(--t-press) var(--ease),
+    transform var(--t-press) var(--ease);
+}
+
+.mark:active {
+  transform: scale(var(--press-scale));
 }
 
 /* A saved word that is not one of this answer's hard words: no dotted line, just its star */
@@ -2660,12 +2694,13 @@ select.search-box {
   pointer-events: none;
 }
 
-/* Motion: 120ms press, 200ms state, 320ms enter, 600ms star moments; one easing; only
-   opacity and position move. */
+/* Motion: 120ms press, 200ms state, 320ms enter, 600ms star moments; one easing. Mostly opacity
+   and position; a press or a star may scale, and a fold grows in height. Distances are tokens
+   (tokens.css) that "reduce motion" sets to 0. */
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--rise));
   }
   to {
     opacity: 1;
@@ -2834,15 +2869,6 @@ select.search-box {
   background: var(--known);
 }
 
-/* Motion off for people who ask for it */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition: none !important;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .confetti {
@@ -3004,4 +3030,169 @@ select.search-box {
   font-size: 16px;
   font-weight: 700;
   line-height: 1.4;
+}
+
+/* Line by line: each plain sentence arrives from its line, one row after another (capped at
+   row 8, so a long answer is still settled in about 0.6s). Only for a new answer. */
+.lines-reveal .line-plain {
+  animation: plain-in var(--t-state) var(--ease) both;
+  animation-delay: calc(120ms + min(var(--i, 0), 7) * var(--stagger));
+}
+
+@keyframes plain-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--plain-x), var(--plain-y));
+  }
+}
+
+/* Stacked rows on a phone: the plain sentence comes down from the line above it */
+@media (max-width: 639px) {
+  :root {
+    --plain-x: 0px;
+    --plain-y: -4px;
+  }
+}
+
+/* The share sheet grows from the Share button */
+.share-sheet {
+  transform-origin: top right;
+  animation: sheet-in var(--t-state) var(--ease) both;
+}
+
+@media (max-width: 479px) {
+  .share-sheet {
+    transform-origin: top center;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--rise-small) * -1)) scale(var(--sheet-scale));
+  }
+}
+
+/* Check yourself: each new question arrives; the result's stars light up one after another */
+.check-question {
+  --rise: var(--rise-small);
+  animation: rise-in var(--t-state) var(--ease) both;
+}
+
+.check-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.check-stars {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.check-stars .sp {
+  animation: twinkle var(--t-star) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 120ms);
+}
+
+.check-stars .sp-pop {
+  animation-name: twinkle-big;
+}
+
+@keyframes twinkle-big {
+  0% {
+    transform: scale(0.6);
+  }
+  50% {
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Folds ("Show the example") open smoothly where the browser can animate to height: auto.
+   Elsewhere they snap open as before. */
+@supports selector(::details-content) {
+  .fold {
+    interpolate-size: allow-keywords;
+  }
+
+  .fold::details-content {
+    block-size: 0;
+    opacity: 0;
+    overflow: clip;
+    transition:
+      block-size var(--t-state) var(--ease),
+      opacity var(--t-state) var(--ease),
+      content-visibility var(--t-state) allow-discrete;
+  }
+
+  .fold[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+
+  /* The gap under the summary grows and shrinks with the content, so nothing below jumps */
+  .fold summary {
+    transition: margin-bottom var(--t-state) var(--ease);
+  }
+}
+
+/* For people who ask for less motion: nothing moves or staggers, entrances are short fades,
+   colour changes stay. Last in the file, so it wins. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --rise: 0px;
+    --rise-small: 0px;
+    --plain-x: 0px;
+    --plain-y: 0px;
+    --toast-y: 0px;
+    --sheet-scale: 1;
+    --stagger: 0ms;
+    --t-state: 120ms;
+    --t-enter: 120ms;
+  }
+
+  .explain-right > .result-card,
+  .loading-line,
+  .lines-reveal .line-plain {
+    animation-delay: 0s !important;
+  }
+
+  .flashcard-back {
+    animation-name: fade-in;
+  }
+
+  .loading-bar,
+  .sp-just,
+  .check-stars .sp,
+  .word-name-saved,
+  .confetti-piece {
+    animation: none;
+  }
+
+  .btn:active:not(:disabled),
+  .word-chip:active,
+  .mark:active {
+    transform: none;
+  }
+
+  .fold::details-content,
+  .fold summary,
+  .fold summary::before,
+  .level-rail-fill,
+  .star-dot {
+    transition: none;
+  }
+
+  /* The wait ring steps once a second instead of sweeping */
+  .countdown-ring circle:last-of-type {
+    transition: none;
+  }
+
+  .toast {
+    transition-duration: 120ms;
+  }
 }

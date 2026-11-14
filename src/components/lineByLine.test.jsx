@@ -159,3 +159,20 @@ describe('stars count', () => {
     expect(screen.queryByRole('button', { name: /saved$/ })).not.toBeInTheDocument()
   })
 })
+
+describe('reveal', () => {
+  const props = { text, lines, words, isSaved: () => false, onSave: vi.fn() }
+  const section = () => screen.getByRole('region', { name: 'Line by line' })
+
+  test('a new answer reveals its plain sentences row by row', () => {
+    render(<LineByLine {...props} reveal />)
+    expect(section()).toHaveClass('lines-reveal')
+    const items = within(section()).getAllByRole('listitem')
+    expect(items.map((li) => li.style.getPropertyValue('--i'))).toEqual(items.map((_, i) => String(i)))
+  })
+
+  test('without reveal nothing is staged', () => {
+    render(<LineByLine {...props} />)
+    expect(section()).not.toHaveClass('lines-reveal')
+  })
+})

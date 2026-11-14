@@ -118,3 +118,42 @@ test('the result is said in the same status line that gave each answer', async (
   expect(within(card()).getByRole('status')).toBe(status)
   expect(status).toHaveTextContent('You got 3 of 3 right.')
 })
+
+describe('motion hooks', () => {
+  async function finish(user, rightAnswers) {
+    for (let i = 0; i < 3; i++) {
+      if (rightAnswers[i]) await pickRight(user)
+      else await pickWrong(user)
+      await user.click(within(card()).getByRole('button', { name: i < 2 ? 'Next' : 'See the result' }))
+    }
+  }
+  const stars = () => card().querySelectorAll('.check-stars .sp')
+
+  test('each question is a new element, so its entrance plays', async () => {
+    const { user } = show()
+    await user.click(screen.getByRole('button', { name: 'Check yourself · 3 questions' }))
+    const first = within(card()).getByTestId('check-question')
+    await pickRight(user)
+    await user.click(within(card()).getByRole('button', { name: 'Next' }))
+    expect(within(card()).getByTestId('check-question')).not.toBe(first)
+  })
+
+  test('the result has one star per question, gold for the right ones', async () => {
+    const { user } = show()
+    await user.click(screen.getByRole('button', { name: 'Check yourself · 3 questions' }))
+    await finish(user, [true, false, true])
+    expect(stars()).toHaveLength(3)
+    expect([...stars()].map((s) => s.classList.contains('sp-right'))).toEqual([true, false, true])
+    expect(card().querySelector('.sp-pop')).toBeNull()
+    expect(card().querySelector('.check-stars')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  test('a full score makes the last star pop, and Check again clears the stars', async () => {
+    const { user } = show()
+    await user.click(screen.getByRole('button', { name: 'Check yourself · 3 questions' }))
+    await finish(user, [true, true, true])
+    expect(stars()[2]).toHaveClass('sp-pop')
+    await user.click(within(card()).getByRole('button', { name: 'Check again' }))
+    expect(stars()).toHaveLength(0)
+  })
+})
